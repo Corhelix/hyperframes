@@ -1,0 +1,82 @@
+<!--
+  Brand Kit — Quote (5 seconds)
+  Full-screen pull quote with attribution.
+  Usage: Replace {{QUOTE}}, {{NAME}}, and {{ROLE}}.
+-->
+<div id="stage" data-composition-id="brand-quote" data-width="1920" data-height="1080" data-fps="30" data-duration="5">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --blue: #0066FF;
+  --heading: 'Montserrat', system-ui, sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.frame {
+  width: 1920px;
+  height: 1080px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 120px 160px;
+  position: relative;
+}
+.quote-mark {
+  font-family: var(--heading);
+  font-size: 200px;
+  font-weight: 900;
+  color: rgba(0,102,255,.08);
+  line-height: 0.8;
+  position: absolute;
+  top: 100px;
+  left: 100px;
+}
+.quote {
+  font-family: var(--heading);
+  font-size: 42px;
+  font-weight: 600;
+  color: #111111;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  margin-bottom: 40px;
+  max-width: 1300px;
+  position: relative;
+  z-index: 1;
+}
+.rule {
+  height: 3px;
+  width: 48px;
+  background: var(--blue);
+  margin-bottom: 24px;
+}
+.attribution {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.name {
+  font-family: var(--heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: #111111;
+}
+.role {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 400;
+  color: #777777;
+}
+</style>
+
+<div class="frame">
+  <span class="quote-mark" data-start="0" data-duration="5">&ldquo;</span>
+  <p class="quote" data-start="0.4" data-duration="4.4">{{QUOTE}}</p>
+  <div class="rule" data-start="1.0" data-duration="3.8"></div>
+  <div class="attribution" data-start="1.2" data-duration="3.6">
+    <span class="name">{{NAME}}</span>
+    <span class="role">{{ROLE}}</span>
+  </div>
+</div>
+</div>

@@ -1,0 +1,122 @@
+/* Brand Kit — Base Variables for Hyperframes Compositions */
+/* Entities: EdisonEd, Wolf & Eagle, Andrew Cockburn */
+
+:root {
+  --blue: #0066FF;
+  --blue-dark: #0052CC;
+  --blue-light: rgba(0,102,255,.06);
+  --blue-mid: rgba(0,102,255,.12);
+  --heading-color: #111111;
+  --text: #333333;
+  --text-700: #4A4A4A;
+  --text-500: #777777;
+  --text-400: #999999;
+  --bg: #FFFFFF;
+  --canvas: #F7F9FA;
+  --canvas-alt: #EEF1F3;
+  --border: #E2E6EA;
+  --border-light: #F0F2F4;
+  --red: #DC2626;
+  --green: #16A34A;
+  --amber: #D97706;
+  --shadow: 0 1px 3px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,.08);
+  --radius: 12px;
+  --heading: 'Montserrat', system-ui, sans-serif;
+  --body: 'Inter', -apple-system, system-ui, 'Segoe UI', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--heading);
+  color: var(--heading-color);
+}
+
+h1 {
+  font-size: 72px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 48px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+h3 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+h4 {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.label {
+  font-family: var(--heading);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--blue);
+}
+
+.rule {
+  height: 3px;
+  background: var(--blue);
+  width: 48px;
+}
+
+.lead {
+  font-size: 20px;
+  line-height: 1.7;
+  color: var(--text-700);
+}
+
+/* Utility classes for compositions */
+.full-frame {
+  width: 1920px;
+  height: 1080px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.pad {
+  padding: 80px;
+}
+
+.bottom-left {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.bottom-right {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+.top-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+}

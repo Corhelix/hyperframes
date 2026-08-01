@@ -1,0 +1,59 @@
+<!--
+  Brand Kit — Stat Card (4 seconds)
+  Full-screen data point with big number and context.
+  Usage: Replace {{STAT}}, {{LABEL}}, and {{CONTEXT}}.
+  Great for pulling attention to a key metric mid-video.
+-->
+<div id="stage" data-composition-id="brand-stat-card" data-width="1920" data-height="1080" data-fps="30" data-duration="4">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --blue: #0066FF;
+  --heading: 'Montserrat', system-ui, sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.frame {
+  width: 1920px;
+  height: 1080px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.stat {
+  font-family: var(--heading);
+  font-size: 180px;
+  font-weight: 900;
+  color: var(--blue);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-bottom: 24px;
+}
+.label {
+  font-family: var(--heading);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #999999;
+  margin-bottom: 16px;
+}
+.context {
+  font-family: var(--body);
+  font-size: 24px;
+  font-weight: 400;
+  color: #4A4A4A;
+  max-width: 700px;
+  line-height: 1.5;
+}
+</style>
+
+<div class="frame">
+  <p class="label" data-start="0.2" data-duration="3.6">{{LABEL}}</p>
+  <h1 class="stat" data-start="0.5" data-duration="3.2">{{STAT}}</h1>
+  <p class="context" data-start="1.0" data-duration="2.8">{{CONTEXT}}</p>
+</div>
+</div>

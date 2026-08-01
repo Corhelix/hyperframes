@@ -1,0 +1,68 @@
+<!--
+  Brand Kit — Lower Third (5 seconds)
+  Name/title bar anchored to bottom-left.
+  Usage: Replace {{NAME}} and {{ROLE}} with your content.
+  Transparent background — overlay on top of video footage.
+-->
+<div id="stage" data-composition-id="brand-lower-third" data-width="1920" data-height="1080" data-fps="30" data-duration="5">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --blue: #0066FF;
+  --heading: 'Montserrat', system-ui, sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.frame {
+  width: 1920px;
+  height: 1080px;
+  position: relative;
+  background: transparent;
+}
+.lower-third {
+  position: absolute;
+  bottom: 80px;
+  left: 80px;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+}
+.accent {
+  width: 4px;
+  background: var(--blue);
+  border-radius: 2px;
+}
+.content {
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(8px);
+  padding: 20px 32px;
+  border-radius: 0 8px 8px 0;
+  border: 1px solid rgba(226,230,234,.8);
+  border-left: none;
+}
+.name {
+  font-family: var(--heading);
+  font-size: 24px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.role {
+  font-family: var(--body);
+  font-size: 15px;
+  font-weight: 400;
+  color: #777777;
+}
+</style>
+
+<div class="frame">
+  <div class="lower-third" data-start="0.5" data-duration="4.0">
+    <div class="accent"></div>
+    <div class="content">
+      <p class="name">{{NAME}}</p>
+      <p class="role">{{ROLE}}</p>
+    </div>
+  </div>
+</div>
+</div>

@@ -1,0 +1,75 @@
+<!--
+  Brand Kit — Outro (3 seconds)
+  Branded closing frame with CTA.
+  Usage: Replace {{CTA}} and {{URL}} with your content.
+  Set {{ENTITY}} to "Wolf & Eagle", "EdisonEd", or "Andrew Cockburn".
+-->
+<div id="stage" data-composition-id="brand-outro" data-width="1920" data-height="1080" data-fps="30" data-duration="3">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --blue: #0066FF;
+  --blue-dark: #0052CC;
+  --heading: 'Montserrat', system-ui, sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+.frame {
+  width: 1920px;
+  height: 1080px;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  text-align: center;
+}
+.accent-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  background: var(--blue);
+}
+.entity {
+  font-family: var(--heading);
+  font-size: 18px;
+  font-weight: 700;
+  color: #111111;
+  letter-spacing: 0.02em;
+  margin-bottom: 40px;
+}
+.cta {
+  font-family: var(--heading);
+  font-size: 52px;
+  font-weight: 800;
+  color: #111111;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 24px;
+  max-width: 1000px;
+}
+.url {
+  font-family: var(--body);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--blue);
+}
+.divider {
+  width: 48px;
+  height: 3px;
+  background: var(--blue);
+  margin-bottom: 48px;
+}
+</style>
+
+<div class="frame">
+  <div class="accent-bar" data-start="0" data-duration="3"></div>
+  <p class="entity" data-start="0" data-duration="3">{{ENTITY}}</p>
+  <div class="divider" data-start="0.2" data-duration="2.8"></div>
+  <h2 class="cta" data-start="0.4" data-duration="2.6">{{CTA}}</h2>
+  <p class="url" data-start="0.8" data-duration="2.2">{{URL}}</p>
+</div>
+</div>

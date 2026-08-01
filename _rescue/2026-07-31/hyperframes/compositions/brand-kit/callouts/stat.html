@@ -1,0 +1,29 @@
+<!-- Callout: stat card. Transparent overlay. Brand kit (Montserrat/Inter, #0066FF). -->
+<div id="stage" data-composition-id="callout-stat" data-width="1920" data-height="1080" data-fps="30" data-duration="5">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+:root{--blue:#0066FF;--heading:'Montserrat',system-ui,sans-serif;--body:'Inter',system-ui,sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+.frame{width:1920px;height:1080px;position:relative;background:#00E000;font-family:var(--body)}
+.card{position:absolute;left:120px;bottom:140px;display:flex;align-items:stretch;gap:0;
+  animation:rise 0.55s cubic-bezier(.2,.7,.2,1) both;}
+.accent{width:6px;background:var(--blue);border-radius:3px}
+.body{background:#fff;padding:26px 40px;border-radius:0 12px 12px 0;border:1px solid #E2E6EA;border-left:none;
+  box-shadow:0 12px 40px rgba(0,0,0,.18)}
+.label{font-family:var(--heading);font-size:18px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:6px}
+.value{font-family:var(--heading);font-size:92px;font-weight:900;line-height:1;letter-spacing:-.02em;color:#111}
+.value .unit{font-size:44px;font-weight:800;color:#4A4A4A;margin-left:6px}
+.sub{font-family:var(--body);font-size:20px;font-weight:400;color:#777;margin-top:8px}
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:translateY(0)}}
+</style>
+<div class="frame">
+  <div class="card" data-start="0.3" data-duration="4.4">
+    <div class="accent"></div>
+    <div class="body">
+      <p class="label">Systemise before AI</p>
+      <p class="value">3<span class="unit">hrs/wk</span></p>
+      <p class="sub">saved once the reporting runs itself</p>
+    </div>
+  </div>
+</div>
+</div>
