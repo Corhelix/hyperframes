@@ -48,6 +48,12 @@ SENTENCE_END = (".", "!", "?", "…")
 
 GSAP_CDN = "https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"
 
+# --only assets: a short lead-in before the graphic animates, and a tail after
+# it clears, so the rendered file contains the whole animation with a little
+# slack at each end for the editor to trim into.
+LEAD = 0.1
+TAIL = 0.2
+
 
 # ---------------------------------------------------------------------------
 # Time handling
@@ -276,13 +282,49 @@ def build_html(
     title: str,
     subtitle: str,
     softener_frames: int,
+    lt_start: float = 0.6,
+    lt_dur: float = 4.6,
+    show_lower_third: bool = True,
+    duration_override: float | None = None,
 ) -> str:
-    total = fmt_seconds(timeline.total_frames, fps)
+    total = (
+        fmt_seconds(to_frames(duration_override, fps), fps)
+        if duration_override is not None
+        else fmt_seconds(timeline.total_frames, fps)
+    )
     scope = f'[data-composition-id="{comp_id}"]'
     is_overlay = mode == "overlay"
 
     media_markup = "" if is_overlay else render_clips(timeline, source)
     dip_markup = "" if is_overlay else render_cut_softeners(timeline, softener_frames)
+
+    lower_third_markup = (
+        f"""      <div class="lower-third" id="lower-third">
+        <div class="lt-rule"></div>
+        <div class="lt-name">{html.escape(title)}</div>
+        <div class="lt-role">{html.escape(subtitle)}</div>
+      </div>"""
+        if show_lower_third
+        else ""
+    )
+
+    lt_out = round(lt_start + lt_dur, 3)
+    lower_third_js = (
+        f"""
+        // Lower third.
+        var lowerThird = document.getElementById("lower-third");
+        tl.set(lowerThird, {{ visibility: "visible" }}, {lt_start});
+        tl.fromTo(
+          lowerThird,
+          {{ opacity: 0, x: -40 }},
+          {{ opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }},
+          {lt_start},
+        );
+        tl.to(lowerThird, {{ opacity: 0, duration: 0.4, ease: "power2.in" }}, {lt_out});
+        tl.set(lowerThird, {{ opacity: 0, visibility: "hidden" }}, {round(lt_out + 0.4, 3)});"""
+        if show_lower_third
+        else ""
+    )
 
     # Cue and callout data are emitted as inline JSON. `var TRANSCRIPT = [...]`
     # with JSON-quoted keys is what the studio caption editor looks for, and
@@ -448,11 +490,7 @@ def build_html(
 {dip_markup}
       <div class="caption-layer" id="caption-layer"></div>
 
-      <div class="lower-third" id="lower-third">
-        <div class="lt-rule"></div>
-        <div class="lt-name">{html.escape(title)}</div>
-        <div class="lt-role">{html.escape(subtitle)}</div>
-      </div>
+{lower_third_markup}
 
       <script src="{GSAP_CDN}"></script>
       <script>
@@ -513,17 +551,7 @@ def build_html(
           tl.set(el, {{ opacity: 0, visibility: "hidden" }}, holdUntil + fade);
         }});
 
-        // Lower third.
-        var lowerThird = document.getElementById("lower-third");
-        tl.set(lowerThird, {{ visibility: "visible" }}, 0.6);
-        tl.fromTo(
-          lowerThird,
-          {{ opacity: 0, x: -40 }},
-          {{ opacity: 1, x: 0, duration: 0.5, ease: "power3.out" }},
-          0.6,
-        );
-        tl.to(lowerThird, {{ opacity: 0, duration: 0.4, ease: "power2.in" }}, 5.2);
-        tl.set(lowerThird, {{ opacity: 0, visibility: "hidden" }}, 5.6);
+{lower_third_js}
 
         // Callouts, authored on the output timeline.
         var stage = document.querySelector('[data-composition-id="{comp_id}"]');
@@ -610,6 +638,13 @@ def main() -> int:
     )
     parser.add_argument("--title", default="Andrew Cockburn")
     parser.add_argument("--subtitle", default="Wolf & Eagle")
+    parser.add_argument(
+        "--only",
+        help=(
+            "Emit one graphic on its own, rebased to start at 0.1s, for rendering "
+            "as a standalone transparent asset. `lower-third` or `callout:N`."
+        ),
+    )
     args = parser.parse_args()
 
     edl = load_json(args.edl)
@@ -632,9 +667,12 @@ def main() -> int:
                 "as written by `hyperframes transcribe`."
             )
 
-    keeps = edl.get("keeps")
+    # `keeps` is this recipe's name; `ranges` is what the long-form-shorts-engine
+    # tools (whisper_transcribe.py, make_captions.py) write. Same meaning, so
+    # accept either and the two toolchains can share one EDL file.
+    keeps = edl.get("keeps") or edl.get("ranges")
     if not keeps:
-        raise SystemExit("EDL has no `keeps`. Nothing to build.")
+        raise SystemExit("EDL has no `keeps` (or `ranges`). Nothing to build.")
     validate_keeps(keeps)
 
     fps = args.fps or int(edl.get("fps", 30))
@@ -649,8 +687,38 @@ def main() -> int:
     cues = build_cues(words, timeline, args.words_per_cue, args.min_words, args.gap)
     callouts = load_json(args.callouts) if args.callouts else []
 
+    mode = args.mode
+    lt_start, lt_dur, show_lower_third = 0.6, 4.6, True
+    duration_override: float | None = None
+    place_at_frames = 0
+
+    if args.only:
+        # One graphic, alone, rebased to LEAD so the rendered asset starts
+        # almost immediately. The manifest records where it belongs on the
+        # output timeline so an NLE can place it back.
+        mode = "overlay"
+        cues = []
+        if args.only == "lower-third":
+            callouts = []
+            lt_start, lt_dur = LEAD, 4.6
+            duration_override = LEAD + lt_dur + 0.4 + TAIL
+            place_at_frames = to_frames(0.6 - LEAD, fps)
+        elif args.only.startswith("callout:"):
+            index = int(args.only.split(":", 1)[1])
+            if index < 0 or index >= len(callouts):
+                raise SystemExit(f"--only {args.only}: no such callout (have {len(callouts)}).")
+            callouts_src = callouts
+            chosen = dict(callouts[index])
+            chosen["start"] = LEAD
+            callouts = [chosen]
+            show_lower_third = False
+            duration_override = LEAD + float(chosen["dur"]) + 0.3 + TAIL
+            place_at_frames = to_frames(float(callouts_src[index]["start"]) - LEAD, fps)
+        else:
+            raise SystemExit("--only takes `lower-third` or `callout:N`.")
+
     markup = build_html(
-        mode=args.mode,
+        mode=mode,
         comp_id=args.comp_id,
         width=args.width,
         height=args.height,
@@ -662,15 +730,25 @@ def main() -> int:
         title=args.title,
         subtitle=args.subtitle,
         softener_frames=to_frames(args.cut_softener, fps),
+        lt_start=lt_start,
+        lt_dur=lt_dur,
+        show_lower_third=show_lower_third,
+        duration_override=duration_override,
     )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(markup, encoding="utf-8")
 
+    print(f"Wrote {args.out}")
+    if args.only:
+        print(f"  mode          {mode} (--only {args.only})")
+        print(f"  duration      {fmt_seconds(to_frames(duration_override, fps), fps)}s")
+        print(f"  place at      {fmt_seconds(place_at_frames, fps)}s on the output timeline")
+        return 0
+
     source_frames = to_frames(max(float(k["end"]) for k in keeps), fps)
     removed = source_frames - timeline.total_frames
-    print(f"Wrote {args.out}")
-    print(f"  mode          {args.mode}")
+    print(f"  mode          {mode}")
     print(f"  clips         {len(timeline.keeps)}")
     print(
         f"  duration      {fmt_seconds(timeline.total_frames, fps)}s "

@@ -1,7 +1,15 @@
 # Source footage is never committed — drop your own into clips/media/.
 clips/media/*
 !clips/media/.gitkeep
+
+# Generated per project by export_package.py — regenerate, don't commit.
+gfx/
+out/
 renders/
 *.mp4
 *.mov
 *.webm
+
+# Python
+__pycache__/
+*.pyc

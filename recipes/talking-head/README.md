@@ -87,7 +87,7 @@ No media elements at all. Transparent background, captions and callouts timed
 against a `rough_cut.mp4` you cut separately:
 
 ```bash
-npx hyperframes render -d overlay --format webm -o overlay.webm
+npx hyperframes render overlay --format webm -o overlay.webm
 ffmpeg -i rough_cut.mp4 -i overlay.webm \
   -filter_complex "[0:v][1:v]overlay=format=auto" \
   -c:a copy final.mp4
@@ -98,6 +98,48 @@ to JPEGs on disk at composition fps before compositing starts. A 20-minute
 source at 30fps is ~36,000 1080p frames — order of 10–15 GB and a long pre-pass
 (estimate, not measured) before a single output frame exists. In overlay mode
 the source never enters the extractor.
+
+## Package export — finished _and_ re-openable
+
+`export_package.py` produces both outcomes from one job, so a video can ship as
+is or be re-opened in DaVinci Resolve:
+
+```bash
+python3 export_package.py \
+  --edl sample/edl.json \
+  --transcript sample/transcript.json \
+  --callouts sample/callouts.json \
+  --source-file /abs/path/to/interview.mp4 \
+  --out out/
+
+out/build.sh          # runs the renders and transcodes
+```
+
+| Deliverable             | What it is                                                          |
+| ----------------------- | ------------------------------------------------------------------- |
+| `final.mp4`             | Full video — the cut with graphics baked in                         |
+| `rough_cut.mp4`         | The cut only, no graphics                                           |
+| `edit.fcpxml`           | Layered timeline — V1 the cut, lane 1 the graphics                  |
+| `edit.edl`              | CMX3600 conform list, cut only — fallback if the FCPXML is rejected |
+| `captions.srt`          | Native Resolve subtitle track, editable text                        |
+| `graphics/*.mov`        | Each graphic alone, ProRes 4444 with alpha                          |
+| `graphics/overlay.mov`  | All graphics, flattened, full length                                |
+| `graphics/stills/*.png` | Flat stills, for when a still places easier than a clip             |
+| `manifest.json`         | Every clip and graphic with its timecode and intended lane          |
+
+**The FCPXML points at the original source, not `rough_cut.mp4`.** Each V1 clip
+carries source in/out timecode against the raw recording, so shots still have
+handles and can be extended in Resolve. Pointing it at the cut file would lock
+the editor to these cut points, which defeats the reason for shipping an
+editable timeline.
+
+**ProRes MOV, not WebM, for anything going into Resolve.** Both carry alpha, but
+`docs/guides/rendering.mdx:278` is explicit that WebM alpha shows as _black_ in
+every editor. WebM is fine for the ffmpeg composite path above; it is wrong for
+an NLE.
+
+Captions ship as SRT rather than as FCPXML titles — Resolve gets a real subtitle
+track you can retype, instead of 10 title generators you can't.
 
 ## Inputs
 
@@ -184,3 +226,16 @@ fresh checkout.
 - **`clips` mode is unproven at high clip counts.** Three clips is fine. Each
   clip triggers its own extraction range, so measure before committing to a cut
   list with a few hundred of them — or use `overlay`.
+- **The FCPXML has not been opened in Resolve.** Its structure, spine
+  continuity, and connected-clip offsets are verified by arithmetic, and the XML
+  is well-formed 1.9 — but Resolve is fussy about `<format>` and asset
+  declarations, and no one has confirmed it imports cleanly. Expect one round of
+  fixes. `edit.edl` is the fallback: far simpler, and near-certain to conform.
+- **Integer frame rates only.** 29.97 and 23.976 need drop-frame timecode, and a
+  non-drop list conformed as drop-frame drifts ~3.6s per hour. The exporter
+  refuses non-integer fps rather than emit a list that looks right and isn't.
+- **Source start timecode is assumed `00:00:00:00`.** If your camera files carry
+  real start TC, every event in the EDL and FCPXML shifts by that offset.
+- **Nothing here has been rendered.** `build.sh` is syntax-checked and the
+  commands match the current CLI, but this container has no ffmpeg and no
+  network access to the GSAP CDN, so no render or transcode has been executed.
