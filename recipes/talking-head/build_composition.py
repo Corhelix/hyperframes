@@ -461,6 +461,14 @@ def build_html(
         // Caption cues on the OUTPUT timeline, already remapped through the
         // EDL. Inline and JSON-shaped so the studio caption editor can read
         // and rewrite them.
+        //
+        // Declared with `var`, deliberately. `hyperframes transcribe` runs
+        // patchCaptionHtml(), which walks every .html under the project and
+        // overwrites `const TRANSCRIPT = [...]` with raw source-timeline
+        // words. On this composition that would be wrong twice over: the
+        // words are on the source timeline, and they include everything the
+        // EDL cut. The patcher's regex only matches `const`, so `var` opts
+        // out while staying readable to the studio caption editor.
         var TRANSCRIPT = {transcript_json};
 
         var CALLOUTS = {callouts_json};
@@ -570,7 +578,11 @@ def main() -> int:
         description="Generate a HyperFrames composition from a transcript and an EDL.",
     )
     parser.add_argument("--edl", required=True, type=Path)
-    parser.add_argument("--transcript", required=True, type=Path)
+    parser.add_argument(
+        "--transcript",
+        type=Path,
+        help="Word-level transcript. Omit to build the cut and callouts with no captions.",
+    )
     parser.add_argument("--callouts", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--mode", choices=("clips", "overlay"), default="clips")
@@ -601,17 +613,24 @@ def main() -> int:
     args = parser.parse_args()
 
     edl = load_json(args.edl)
-    transcript = load_json(args.transcript)
 
-    if isinstance(transcript, dict):
-        words = transcript.get("words") or transcript.get("segments") or []
-    else:
-        words = transcript
-    if not words:
-        raise SystemExit(
-            "Transcript is empty. Expected [{\"text\", \"start\", \"end\"}, ...] "
-            "as written by `hyperframes transcribe`."
-        )
+    # Timestamp extraction is not done here. `hyperframes transcribe <file>`
+    # already writes transcript.json in exactly this shape -- it manages the
+    # whisper.cpp binary, model download, language selection, SRT/VTT/OpenAI
+    # import and speech-onset stripping. Re-implementing that in Python would
+    # be a second, worse copy.
+    words: list[dict] = []
+    if args.transcript:
+        transcript = load_json(args.transcript)
+        if isinstance(transcript, dict):
+            words = transcript.get("words") or transcript.get("segments") or []
+        else:
+            words = transcript
+        if not words:
+            raise SystemExit(
+                'Transcript is empty. Expected [{"text", "start", "end"}, ...] '
+                "as written by `hyperframes transcribe`."
+            )
 
     keeps = edl.get("keeps")
     if not keeps:

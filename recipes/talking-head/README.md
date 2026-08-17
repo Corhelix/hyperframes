@@ -9,11 +9,17 @@ TimeBolt, Descript, or your own silence/filler detector) and turns it into
 something HyperFrames can render.
 
 ```
-transcribe → detect cuts → [ EDL ] → build_composition.py → preview → render
-                              ↑                ↑
-                        upstream, not      this folder
-                        in this folder
+hyperframes transcribe → detect cuts → [ EDL ] → build_composition.py → preview → render
+         ↑                     ↑                          ↑
+   already in the CLI    upstream, not             this folder
+                         in this folder
 ```
+
+Timestamp extraction is **not** re-implemented here. `hyperframes transcribe
+video.mp4` writes `transcript.json` in exactly the shape this script reads —
+it manages the whisper.cpp binary, model download, language selection, SRT /
+VTT / OpenAI import, and speech-onset stripping. Both the whisper path and the
+import path converge on the same normalised `[{"text","start","end"}]` array.
 
 ## Quick start
 
@@ -95,11 +101,11 @@ the source never enters the extractor.
 
 ## Inputs
 
-| File              | Time base  | Shape                                                                          |
-| ----------------- | ---------- | ------------------------------------------------------------------------------ |
-| `transcript.json` | source     | `[{"text","start","end"}]` — exactly what `hyperframes transcribe` writes      |
-| `edl.json`        | source     | `{"source","fps","keeps":[{"start","end"}],"cuts":[{"start","end","reason"}]}` |
-| `callouts.json`   | **output** | `[{"text","start","dur","x","y","w","size"}]`                                  |
+| File              | Time base  | Shape                                                                                                                                                   |
+| ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transcript.json` | source     | `[{"text","start","end"}]` — exactly what `hyperframes transcribe` writes. Optional: omit `--transcript` to build the cut and callouts with no captions |
+| `edl.json`        | source     | `{"source","fps","keeps":[{"start","end"}],"cuts":[{"start","end","reason"}]}`                                                                          |
+| `callouts.json`   | **output** | `[{"text","start","dur","x","y","w","size"}]`                                                                                                           |
 
 Callouts are authored on the _output_ timeline because you write them after you
 can see the cut — the same convention as `callouts-sop.json` in the
@@ -129,6 +135,15 @@ framework-compatible option.
 **Studio-editable captions.** Cues are emitted as an inline
 `var TRANSCRIPT = [...]` with JSON-quoted keys, which is what the studio caption
 editor looks for.
+
+**`var`, not `const` — do not "fix" this.** `hyperframes transcribe` also runs
+`patchCaptionHtml()`, which walks every `.html` under the project directory and
+overwrites `const TRANSCRIPT = [...]` with the raw word list. On an
+EDL-remapped composition that is wrong twice over: the words are on the source
+timeline, and they include everything the EDL cut. The patcher's regex matches
+`const` only, so declaring `var` opts out of the rewrite while staying readable
+to the studio caption editor and to the `caption_transcript_not_inline` lint
+rule, both of which accept `const`, `let`, or `var`.
 
 ## Options
 

@@ -140,6 +140,14 @@
         // Caption cues on the OUTPUT timeline, already remapped through the
         // EDL. Inline and JSON-shaped so the studio caption editor can read
         // and rewrite them.
+        //
+        // Declared with `var`, deliberately. `hyperframes transcribe` runs
+        // patchCaptionHtml(), which walks every .html under the project and
+        // overwrites `const TRANSCRIPT = [...]` with raw source-timeline
+        // words. On this composition that would be wrong twice over: the
+        // words are on the source timeline, and they include everything the
+        // EDL cut. The patcher's regex only matches `const`, so `var` opts
+        // out while staying readable to the studio caption editor.
         var TRANSCRIPT = [
   {
     "text": "So most teams treat video",
