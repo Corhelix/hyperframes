@@ -1,0 +1,29 @@
+[
+  {
+    "text": "The render was never the bottleneck",
+    "start": 6.5,
+    "dur": 3.2,
+    "x": 96,
+    "y": 140,
+    "w": 760,
+    "size": 38
+  },
+  {
+    "text": "40 seconds out of 50 minutes",
+    "start": 11.5,
+    "dur": 3.5,
+    "x": 96,
+    "y": 140,
+    "w": 700,
+    "size": 42
+  },
+  {
+    "text": "Decisions first. Render second.",
+    "start": 17.5,
+    "dur": 3.0,
+    "x": 96,
+    "y": 140,
+    "w": 720,
+    "size": 38
+  }
+]

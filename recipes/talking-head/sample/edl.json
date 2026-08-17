@@ -1,0 +1,14 @@
+{
+  "source": "media/source.mp4",
+  "fps": 30,
+  "keeps": [
+    { "start": 0.6, "end": 9.4 },
+    { "start": 10.9, "end": 18.2 },
+    { "start": 19.6, "end": 26.0 }
+  ],
+  "cuts": [
+    { "start": 0.0, "end": 0.6, "reason": "silence" },
+    { "start": 9.4, "end": 10.9, "reason": "filler" },
+    { "start": 18.2, "end": 19.6, "reason": "silence" }
+  ]
+}

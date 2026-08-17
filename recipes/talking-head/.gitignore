@@ -1,0 +1,7 @@
+# Source footage is never committed — drop your own into clips/media/.
+clips/media/*
+!clips/media/.gitkeep
+renders/
+*.mp4
+*.mov
+*.webm
