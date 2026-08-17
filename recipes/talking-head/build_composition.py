@@ -502,11 +502,16 @@ def build_html(
         //
         // Declared with `var`, deliberately. `hyperframes transcribe` runs
         // patchCaptionHtml(), which walks every .html under the project and
-        // overwrites `const TRANSCRIPT = [...]` with raw source-timeline
+        // overwrites a const-declared TRANSCRIPT with raw source-timeline
         // words. On this composition that would be wrong twice over: the
         // words are on the source timeline, and they include everything the
         // EDL cut. The patcher's regex only matches `const`, so `var` opts
         // out while staying readable to the studio caption editor.
+        //
+        // Do not write the const form literally anywhere in this file, not
+        // even in a comment: the studio's detector regex scans for the first
+        // occurrence and would capture from the comment to the real array,
+        // yielding a span that is not valid JSON.
         var TRANSCRIPT = {transcript_json};
 
         var CALLOUTS = {callouts_json};
@@ -693,29 +698,38 @@ def main() -> int:
     place_at_frames = 0
 
     if args.only:
-        # One graphic, alone, rebased to LEAD so the rendered asset starts
-        # almost immediately. The manifest records where it belongs on the
-        # output timeline so an NLE can place it back.
+        # One layer, alone, so it can be rendered as a standalone transparent
+        # asset and placed on its own lane in an NLE. `place_at_frames` records
+        # where it belongs on the output timeline.
         mode = "overlay"
-        cues = []
-        if args.only == "lower-third":
+        if args.only == "captions":
+            # Captions keep their real output-timeline times and run the full
+            # length, so the asset drops onto the timeline at 00:00.
+            callouts = []
+            show_lower_third = False
+            duration_override = timeline.total_frames / fps
+        elif args.only == "lower-third":
+            # Single graphics rebase to LEAD so the rendered file starts almost
+            # immediately rather than carrying dead frames at the head.
+            cues = []
             callouts = []
             lt_start, lt_dur = LEAD, 4.6
             duration_override = LEAD + lt_dur + 0.4 + TAIL
             place_at_frames = to_frames(0.6 - LEAD, fps)
         elif args.only.startswith("callout:"):
+            cues = []
             index = int(args.only.split(":", 1)[1])
             if index < 0 or index >= len(callouts):
                 raise SystemExit(f"--only {args.only}: no such callout (have {len(callouts)}).")
-            callouts_src = callouts
+            original_start = float(callouts[index]["start"])
             chosen = dict(callouts[index])
             chosen["start"] = LEAD
             callouts = [chosen]
             show_lower_third = False
             duration_override = LEAD + float(chosen["dur"]) + 0.3 + TAIL
-            place_at_frames = to_frames(float(callouts_src[index]["start"]) - LEAD, fps)
+            place_at_frames = to_frames(original_start - LEAD, fps)
         else:
-            raise SystemExit("--only takes `lower-third` or `callout:N`.")
+            raise SystemExit("--only takes `captions`, `lower-third`, or `callout:N`.")
 
     markup = build_html(
         mode=mode,

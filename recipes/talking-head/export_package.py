@@ -2,26 +2,30 @@
 """
 Export a Resolve-ready package from a transcript + EDL + callouts.
 
-Produces four deliverables so the same job can be either finished or
-re-opened:
+Produces both a finished video and a finished TIMELINE:
 
   1. final.mp4        the full video -- cut with graphics baked in
-  2. rough_cut.mp4    the cut only, no graphics, for hand-finishing
-  3. edit.fcpxml      layered timeline: V1 the cut, V2+ the graphics
-  4. graphics/        each graphic as its own transparent ProRes MOV,
-                      plus a flattened full-length overlay and PNG stills
+  2. edit.fcpxml      the same program as an editable timeline: the cut,
+                      the captions, the lower third and every callout, each
+                      on its own lane, in place. Render it and you get the
+                      same picture as final.mp4.
+  3. rough_cut.mp4    the cut only, no graphics, for hand-finishing
+  4. graphics/        every layer as its own transparent ProRes MOV, plus a
+                      flattened full-length overlay and PNG stills
 
-Plus captions.srt (a native Resolve subtitle track) and edit.edl (a
-CMX3600 conform list as a fallback if the FCPXML is rejected).
+Plus captions.srt (swap the burned-in caption layer for an editable
+subtitle track) and edit.edl (a CMX3600 conform list, cut only, as a
+fallback if the FCPXML is rejected).
+
+The FCPXML is a complete program, not a conform. Every visual layer is a
+real rendered asset positioned on the timeline, so what an editor sees is
+pixel-identical to the delivered render by construction -- they can then
+move, retime, restyle or delete any single layer without rebuilding.
 
 This script writes the *project files and the build script*. It does not
 render or transcode -- run out/build.sh for that, on a machine with
-ffmpeg and a working `hyperframes render`.
-
-The FCPXML references the ORIGINAL source with source in/out points, not
-rough_cut.mp4. That is deliberate: pointing at the cut file would lock
-the editor to these cut points with no handles, which defeats the reason
-for shipping an editable timeline at all.
+ffmpeg and a working `hyperframes render`. Import the FCPXML AFTER
+build.sh finishes, or the graphics come in offline.
 
 Usage:
     python3 export_package.py \
@@ -91,9 +95,33 @@ def rational(frames: int, fps: int) -> str:
 # ---------------------------------------------------------------------------
 
 
-def graphic_elements(callouts: list[dict], fps: int, lt_start: float, lt_dur: float) -> list[dict]:
-    """Every graphic that gets its own rendered asset, in timeline order."""
-    elements: list[dict] = [
+def graphic_elements(
+    callouts: list[dict],
+    fps: int,
+    lt_start: float,
+    lt_dur: float,
+    caption_frames: int = 0,
+) -> list[dict]:
+    """Every layer that gets its own rendered asset, in timeline order.
+
+    Captions are lane 1, graphics lane 2 -- matching the z-order inside the
+    composition, where callouts and the lower third sit above captions.
+    """
+    elements: list[dict] = []
+    if caption_frames > 0:
+        elements.append(
+            {
+                "key": "captions",
+                "slug": "captions",
+                "name": "Captions",
+                "only": "captions",
+                "place_frames": 0,
+                "duration_frames": caption_frames,
+                "settled_frames": 0,
+                "lane": 1,
+            }
+        )
+    elements.append(
         {
             "key": "lower-third",
             "slug": "lower-third",
@@ -103,8 +131,9 @@ def graphic_elements(callouts: list[dict], fps: int, lt_start: float, lt_dur: fl
             "duration_frames": to_frames(LEAD + lt_dur + 0.4 + TAIL, fps),
             # The moment the graphic is fully on screen, used for the still.
             "settled_frames": to_frames(LEAD + 0.5, fps),
+            "lane": 2,
         }
-    ]
+    )
     for index, callout in enumerate(callouts):
         elements.append(
             {
@@ -115,9 +144,10 @@ def graphic_elements(callouts: list[dict], fps: int, lt_start: float, lt_dur: fl
                 "place_frames": to_frames(float(callout["start"]) - LEAD, fps),
                 "duration_frames": to_frames(LEAD + float(callout["dur"]) + 0.3 + TAIL, fps),
                 "settled_frames": to_frames(LEAD + 0.45, fps),
+                "lane": 2,
             }
         )
-    elements.sort(key=lambda e: e["place_frames"])
+    elements.sort(key=lambda e: (e["lane"], e["place_frames"]))
     return elements
 
 
@@ -172,7 +202,22 @@ def write_fcpxml(
     elements: list[dict],
     graphics_dir: Path,
     project_name: str,
+    v1: str = "source",
+    rough_cut: Path | None = None,
 ) -> None:
+    """Write a complete program: the cut plus every graphic layer, in place.
+
+    Opening this and rendering must produce the same picture as final.mp4 --
+    that is the whole point of shipping it. Every visual layer is a real
+    transparent ProRes asset positioned on its own lane, so the timeline is
+    pixel-identical to the baked render by construction rather than by
+    approximation.
+
+    v1="source"   spine references the ORIGINAL recording with source in/out,
+                  so shots keep handles and can be extended.
+    v1="roughcut" spine is a single flattened rough_cut.mp4. Simpler, matches
+                  the delivered cut exactly, but no handles.
+    """
     fcpxml = ET.Element("fcpxml", version="1.9")
     resources = ET.SubElement(fcpxml, "resources")
 
@@ -206,6 +251,27 @@ def write_fcpxml(
         kind="original-media",
         src=source_file.resolve().as_uri(),
     )
+
+    if v1 == "roughcut":
+        rough_asset = ET.SubElement(
+            resources,
+            "asset",
+            id="rRC",
+            name="rough_cut",
+            start="0s",
+            duration=rational(timeline.total_frames, fps),
+            hasVideo="1",
+            hasAudio="1",
+            audioSources="1",
+            audioChannels="2",
+            format="r0",
+        )
+        ET.SubElement(
+            rough_asset,
+            "media-rep",
+            kind="original-media",
+            src=(rough_cut or Path("rough_cut.mp4")).resolve().as_uri(),
+        )
 
     for index, element in enumerate(elements):
         element["ref"] = f"r{index + 2}"
@@ -241,44 +307,65 @@ def write_fcpxml(
     )
     spine = ET.SubElement(sequence, "spine")
 
-    spine_clips = []
-    for index, keep in enumerate(timeline.keeps, start=1):
+    spine_clips: list[tuple[ET.Element, int, int]] = []
+    if v1 == "roughcut":
         clip = ET.SubElement(
             spine,
             "asset-clip",
-            ref="r1",
-            name=f"{source_file.stem} {index}",
-            offset=rational(keep["of_start"], fps),
-            start=rational(keep["sf_start"], fps),
-            duration=rational(keep["frames"], fps),
+            ref="rRC",
+            name=f"{project_name} rough cut",
+            offset="0s",
+            start="0s",
+            duration=rational(timeline.total_frames, fps),
             format="r0",
             tcFormat="NDF",
         )
-        spine_clips.append((clip, keep))
+        # (element, its record-in on the sequence, its own `start` value)
+        spine_clips.append((clip, 0, 0))
+    else:
+        for index, keep in enumerate(timeline.keeps, start=1):
+            clip = ET.SubElement(
+                spine,
+                "asset-clip",
+                ref="r1",
+                name=f"{source_file.stem} {index}",
+                offset=rational(keep["of_start"], fps),
+                start=rational(keep["sf_start"], fps),
+                duration=rational(keep["frames"], fps),
+                format="r0",
+                tcFormat="NDF",
+            )
+            spine_clips.append((clip, keep["of_start"], keep["sf_start"]))
 
-    # Graphics ride as connected clips on lane 1. A connected clip's offset is
-    # expressed in its PARENT's local time base -- i.e. measured from the
-    # parent's `start`, not from the sequence origin. Getting this wrong is the
-    # usual reason graphics land in the wrong place on import.
+    # Every graphic layer rides as a connected clip. A connected clip's offset
+    # is expressed in its PARENT's local time base -- measured from the parent's
+    # `start`, not from the sequence origin. Getting this wrong is the usual
+    # reason graphics land in the wrong place on import.
+    #
+    # Lane 1 is captions, lane 2 the graphics, matching the composition's
+    # z-order. Together with the spine that is the complete program: render
+    # this timeline and you get final.mp4.
+    spine_ends = [
+        (element, record_in, local_start) for element, record_in, local_start in spine_clips
+    ]
     for element in elements:
         place = element["place_frames"]
-        parent, keep = spine_clips[0]
-        for candidate, candidate_keep in spine_clips:
-            if candidate_keep["of_start"] <= place < candidate_keep["of_end"]:
-                parent, keep = candidate, candidate_keep
+        parent, record_in, local_start = spine_ends[0]
+        for candidate, candidate_in, candidate_start in spine_ends:
+            candidate_duration = int(candidate.get("duration").split("/")[0] or 0)
+            if candidate_in <= place < candidate_in + candidate_duration:
+                parent, record_in, local_start = candidate, candidate_in, candidate_start
                 break
         else:
-            if place >= spine_clips[-1][1]["of_end"]:
-                parent, keep = spine_clips[-1]
+            parent, record_in, local_start = spine_ends[-1]
 
-        local_offset = keep["sf_start"] + (place - keep["of_start"])
         ET.SubElement(
             parent,
             "asset-clip",
             ref=element["ref"],
-            lane="1",
+            lane=str(element.get("lane", 1)),
             name=element["name"],
-            offset=rational(local_offset, fps),
+            offset=rational(local_start + (place - record_in), fps),
             start="0s",
             duration=rational(element["duration_frames"], fps),
             format="r0",
@@ -342,7 +429,8 @@ def write_build_script(
         "#    ProRes 4444, not WebM: WebM alpha shows as black in Resolve.",
         'npx hyperframes render "$RECIPE/overlay" --format mov -o "$OUT/graphics/overlay.mov"',
         "",
-        "# 4. Each graphic as its own transparent asset, for free repositioning.",
+        "# 4. Every layer as its own transparent asset. These are what the",
+        "#    FCPXML timeline references -- render them before importing it.",
     ]
     for element in elements:
         slug = element["slug"]
@@ -394,6 +482,15 @@ def main() -> int:
     parser.add_argument("--gap", type=float, default=0.35)
     parser.add_argument("--project-name", default="talking-head")
     parser.add_argument("--reel", default="AX", help="CMX3600 reel name, 8 chars max.")
+    parser.add_argument(
+        "--v1",
+        choices=("source", "roughcut"),
+        default="source",
+        help=(
+            "What the FCPXML spine references. `source` cuts the original recording "
+            "so shots keep handles; `roughcut` lays down the flattened rough_cut.mp4."
+        ),
+    )
     parser.add_argument("--title", default="Andrew Cockburn")
     parser.add_argument("--subtitle", default="Wolf & Eagle")
     args = parser.parse_args()
@@ -419,7 +516,13 @@ def main() -> int:
         raise SystemExit("EDL keeps produced a zero-length timeline.")
 
     cues = build_cues(words, timeline, args.words_per_cue, args.min_words, args.gap) if words else []
-    elements = graphic_elements(callouts, fps, lt_start=0.6, lt_dur=4.6)
+    elements = graphic_elements(
+        callouts,
+        fps,
+        lt_start=0.6,
+        lt_dur=4.6,
+        caption_frames=timeline.total_frames if cues else 0,
+    )
 
     out = args.out.resolve()
     (out / "graphics" / "stills").mkdir(parents=True, exist_ok=True)
@@ -453,6 +556,21 @@ def main() -> int:
         ]
         if args.callouts:
             cmd += ["--callouts", str(args.callouts.resolve())]
+        if element["only"] == "captions":
+            # The captions layer needs the transcript and the identical cue
+            # grouping, or it renders empty or out of sync with final.mp4.
+            if not args.transcript:
+                raise SystemExit("A captions layer was requested but no --transcript was given.")
+            cmd += [
+                "--transcript",
+                str(args.transcript.resolve()),
+                "--words-per-cue",
+                str(args.words_per_cue),
+                "--min-words",
+                str(args.min_words),
+                "--gap",
+                str(args.gap),
+            ]
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
 
     if cues:
@@ -482,6 +600,8 @@ def main() -> int:
         elements=elements,
         graphics_dir=out / "graphics",
         project_name=args.project_name,
+        v1=args.v1,
+        rough_cut=out / "rough_cut.mp4",
     )
 
     manifest = {
@@ -494,7 +614,10 @@ def main() -> int:
         "deliverables": {
             "final.mp4": "Full video — cut with graphics baked in.",
             "rough_cut.mp4": "The cut only, no graphics.",
-            "edit.fcpxml": "Layered timeline. V1 references the ORIGINAL source with handles.",
+            "edit.fcpxml": (
+                "Complete program: the cut plus every graphic layer in place. "
+                "Render it and you get the same picture as final.mp4."
+            ),
             "edit.edl": "CMX3600 conform list, cut only. Fallback if the FCPXML is rejected.",
             "captions.srt": "Import as a subtitle track.",
             "graphics/overlay.mov": "All graphics, full length, ProRes 4444 alpha.",

@@ -118,28 +118,51 @@ out/build.sh          # runs the renders and transcodes
 | Deliverable             | What it is                                                          |
 | ----------------------- | ------------------------------------------------------------------- |
 | `final.mp4`             | Full video — the cut with graphics baked in                         |
+| `edit.fcpxml`           | **The same program as an editable timeline**                        |
 | `rough_cut.mp4`         | The cut only, no graphics                                           |
-| `edit.fcpxml`           | Layered timeline — V1 the cut, lane 1 the graphics                  |
 | `edit.edl`              | CMX3600 conform list, cut only — fallback if the FCPXML is rejected |
-| `captions.srt`          | Native Resolve subtitle track, editable text                        |
-| `graphics/*.mov`        | Each graphic alone, ProRes 4444 with alpha                          |
+| `captions.srt`          | Swap the caption layer for an editable subtitle track               |
+| `graphics/*.mov`        | Every layer alone, ProRes 4444 with alpha                           |
 | `graphics/overlay.mov`  | All graphics, flattened, full length                                |
 | `graphics/stills/*.png` | Flat stills, for when a still places easier than a clip             |
-| `manifest.json`         | Every clip and graphic with its timecode and intended lane          |
+| `manifest.json`         | Every clip and layer with its timecode and lane                     |
 
-**The FCPXML points at the original source, not `rough_cut.mp4`.** Each V1 clip
-carries source in/out timecode against the raw recording, so shots still have
-handles and can be extended in Resolve. Pointing it at the cut file would lock
-the editor to these cut points, which defeats the reason for shipping an
-editable timeline.
+### The FCPXML is a finished program, not a conform
+
+Open it and you get the whole output on one timeline — the cut, the captions,
+the lower third and every callout, each on its own lane, in place. Render it and
+the picture matches `final.mp4`. Nothing to assemble, nothing to import
+separately:
+
+```
+lane 2   [lower third]     [callout 1]    [callout 2]    [callout 3]
+lane 1   [────────────── captions ──────────────────────────────────]
+spine    [── clip 1 ──][──── clip 2 ────][───── clip 3 ─────]  + audio
+```
+
+Every layer is a real rendered ProRes asset placed at its exact frame, so the
+timeline is pixel-identical to the baked render **by construction** rather than
+by approximation — the graphics are literally the same renders. From there any
+single layer can be moved, retimed, restyled or deleted without rebuilding
+anything.
+
+**Import the FCPXML after `build.sh` finishes**, or the graphics come in
+offline — the timeline references assets the build step creates.
+
+**`--v1 source` (default) vs `--v1 roughcut`.** By default the spine cuts the
+original recording with source in/out timecode, so shots keep handles and can be
+extended — the way a real edit looks. `--v1 roughcut` instead lays down the
+single flattened `rough_cut.mp4`: exactly the delivered cut, simpler to relink,
+but no handles.
 
 **ProRes MOV, not WebM, for anything going into Resolve.** Both carry alpha, but
 `docs/guides/rendering.mdx:278` is explicit that WebM alpha shows as _black_ in
 every editor. WebM is fine for the ffmpeg composite path above; it is wrong for
 an NLE.
 
-Captions ship as SRT rather than as FCPXML titles — Resolve gets a real subtitle
-track you can retype, instead of 10 title generators you can't.
+Captions ride the timeline as a rendered layer so the styling survives exactly.
+`captions.srt` ships alongside for when you'd rather delete that layer and use
+an editable subtitle track instead.
 
 ## Inputs
 

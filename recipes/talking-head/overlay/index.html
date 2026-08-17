@@ -129,11 +129,16 @@
         //
         // Declared with `var`, deliberately. `hyperframes transcribe` runs
         // patchCaptionHtml(), which walks every .html under the project and
-        // overwrites `const TRANSCRIPT = [...]` with raw source-timeline
+        // overwrites a const-declared TRANSCRIPT with raw source-timeline
         // words. On this composition that would be wrong twice over: the
         // words are on the source timeline, and they include everything the
         // EDL cut. The patcher's regex only matches `const`, so `var` opts
         // out while staying readable to the studio caption editor.
+        //
+        // Do not write the const form literally anywhere in this file, not
+        // even in a comment: the studio's detector regex scans for the first
+        // occurrence and would capture from the comment to the real array,
+        // yielding a span that is not valid JSON.
         var TRANSCRIPT = [
   {
     "text": "So most teams treat video",
