@@ -461,6 +461,7 @@ def write_build_script(
     deinterlace: bool = False,
     render_rate: FrameRate | None = None,
     field_order: str = "progressive",
+    final: str = "ffmpeg",
 ) -> None:
     # One decode, N trim filters, one concat -- not N re-opens of the same
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
@@ -542,15 +543,29 @@ def write_build_script(
             f'ffmpeg -y -ss {at:.3f} -i "$OUT/graphics/{slug}.mov" -frames:v 1 '
             f'"$OUT/graphics/stills/{slug}.png"'
         )
-    lines += [
-        "",
-        "# 5. Full video: the rough cut with the graphics overlaid. The footage",
-        "#    stays at its native rate throughout -- it is never re-rendered",
-        "#    through the frame extractor, so no rate is ever unreachable.",
-        'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
-        '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
-        '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
-    ]
+    if final == "hyperframes":
+        lines += [
+            "",
+            "# 5. Full video, rendered by HyperFrames: the clips composition holds",
+            f"#    the footage as well as the graphics, so it renders at {nominal}."
+            + (
+                f" The source is {rate}, so the footage is resampled here."
+                if not (rate.is_exact_integer and rate.num == nominal)
+                else ""
+            ),
+            '#    clips/media/source.mp4 must exist.',
+            f'npx hyperframes render "$RECIPE/clips" --fps {nominal} -o "$OUT/final.mp4"',
+        ]
+    else:
+        lines += [
+            "",
+            "# 5. Full video: the rough cut with the graphics overlaid. The footage",
+            "#    keeps whatever rate and field order it arrived with -- nothing",
+            "#    re-renders it, so no source format is out of reach.",
+            'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
+            '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
+            '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
+        ]
     lines += ["", 'echo "Package built in $OUT"', ""]
 
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -613,6 +628,18 @@ def main() -> int:
         help="Skip ffprobe. Then --fps and the rest must be supplied explicitly.",
     )
     parser.add_argument(
+        "--final",
+        choices=("ffmpeg", "hyperframes"),
+        default="ffmpeg",
+        help=(
+            "How final.mp4 is assembled. `ffmpeg` composites the graphics over "
+            "the rough cut, leaving the footage at whatever rate and field order "
+            "it already had. `hyperframes` renders the clips composition, so "
+            "HyperFrames does the whole programme -- footage included -- at "
+            "24, 30 or 60. Both work; pick per job."
+        ),
+    )
+    parser.add_argument(
         "--no-regenerate-comps",
         action="store_true",
         help="Leave clips/ and overlay/ alone. They must already match the source format.",
@@ -660,10 +687,11 @@ def main() -> int:
     else:
         rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
 
-    # HyperFrames renders cards and titles; it never sees the footage. Graphics
-    # are rendered at the timeline rate when the engine takes it, and at 30
-    # otherwise -- nothing depends on the choice, since graphics carry no sync
+    # Graphics render at the timeline rate when the engine takes it and at 30
+    # otherwise. Nothing depends on the choice: graphics carry no sync
     # obligation and the overlay filter samples them in the output timebase.
+    # (HyperFrames is not limited to graphics -- --final hyperframes hands it
+    # the whole programme. This only picks the rate for the graphics render.)
     render_rate = (
         rate if rate.is_exact_integer and rate.num in SUPPORTED_RENDER_FPS else FrameRate(30, 1)
     )
@@ -993,6 +1021,7 @@ def main() -> int:
         deinterlace=args.deinterlace,
         render_rate=render_rate,
         field_order="progressive" if args.deinterlace else field_order,
+        final=args.final,
     )
 
     print(f"Package scaffolded in {out}")
@@ -1002,6 +1031,7 @@ def main() -> int:
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
     print(f"  format        {width}x{height} @ {rate}")
     print(f"  graphics      rendered at {render_rate.num} (no sync obligation)")
+    print(f"  final.mp4     assembled by {args.final}")
     print(f"  next          {out / 'build.sh'}")
     return 0
 
