@@ -193,9 +193,40 @@ that happens to begin at zero. `--record-start-tc` sets the timeline start
 **Source length comes from the file**, so shots keep handles past the last cut.
 Without a probe it falls back to the EDL's extent and says so.
 
+**Frame size follows the source too** — the composition is built at the probed
+dimensions, so a 4K master produces 4K graphics, not upscaled 1080.
+
+**Render rate is capped at 24/30/60.** `renderOrchestrator.ts` types it as
+`fps: 24 | 30 | 60`, so NTSC rates render at their nominal integer and the
+timebase is re-stamped with `-itsscale 1.001` afterwards — exact, frame count
+preserved, nothing resampled. At an NTSC rate `final.mp4` is composited from the
+rough cut plus the overlay rather than re-rendered through the frame extractor,
+so the footage never leaves its native rate. **PAL 25 and 50 cannot be rendered
+at all** and the exporter refuses rather than pretend.
+
 `python3 mediainfo.py --probe <file>` prints what it reads.
 `python3 mediainfo.py --selftest` checks the timecode maths — including that an
 hour of 29.97DF is 107892 frames and an hour of 59.94DF is 215784.
+
+## Timecode is optional; the ledger is not
+
+Most recordings — screen captures, phone, OBS, Zoom — carry no timecode at all.
+Nothing here depends on it. The shared reference is **elapsed seconds from the
+first frame of the file**, which the transcript and the EDL both already use.
+Start TC is read and honoured when present, and simply absent otherwise.
+
+`out/edit_ledger.json` is the audit trail:
+
+- every removal, with its reason and source range
+- every surviving segment, with its source range, output range and `shift` —
+  add `shift` to any source time to get the output time
+- every word, mapped source → output, with dropped words marked
+
+Lip sync is preserved by construction rather than by correction: picture and
+audio are cut from the same source at the same frame boundaries, so a word's
+mouth and its sound move together. Every word in a segment carries that
+segment's identical shift — the ledger is what lets you prove it, and what lets
+you re-derive captions if the cut changes.
 
 ## Inputs
 

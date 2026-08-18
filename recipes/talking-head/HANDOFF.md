@@ -146,6 +146,12 @@ FRAME`, source TC offset by the file's `01:00:00;00`, and all five layers
   the progressive intermediate. You get a warning if you forget.
 - **VFR cannot be conformed.** ffprobe VFR detection warns; transcode to CFR
   first.
+- **Render rate is capped at 24/30/60** by the engine. NTSC renders at the
+  nominal integer and gets `-itsscale 1.001` applied — exact, nothing resampled.
+  **PAL 25/50 is refused outright.**
+- **No timecode required.** Elapsed time from the head of the file is the
+  reference. `out/edit_ledger.json` records every removal and every word's
+  source→output mapping, which is the audit trail for sync.
 - **ProRes MOV for anything entering Resolve.** WebM carries alpha but renders
   as black in editors. WebM is only for the ffmpeg composite path.
 - **`clips` mode vs `overlay` mode.** `clips` puts the source through the frame

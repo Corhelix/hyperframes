@@ -107,12 +107,18 @@ def graphic_elements(
     lt_start: float,
     lt_dur: float,
     caption_frames: int = 0,
+    render_rate: FrameRate | None = None,
 ) -> list[dict]:
     """Every layer that gets its own rendered asset, in timeline order.
 
     Captions are lane 1, graphics lane 2 -- matching the z-order inside the
     composition, where callouts and the lower third sit above captions.
     """
+    # Placement uses the true rate; durations use the rate the asset is
+    # actually rendered at. A frame COUNT is rate-independent, so the two stay
+    # consistent on one timeline even when the render rate is the nominal
+    # integer and the timeline is 29.97.
+    render_rate = render_rate or rate
     elements: list[dict] = []
     if caption_frames > 0:
         elements.append(
@@ -134,9 +140,9 @@ def graphic_elements(
             "name": "Lower third",
             "only": "lower-third",
             "place_frames": to_frames(lt_start - LEAD, rate),
-            "duration_frames": to_frames(LEAD + lt_dur + 0.4 + TAIL, rate),
+            "duration_frames": to_frames(LEAD + lt_dur + 0.4 + TAIL, render_rate),
             # The moment the graphic is fully on screen, used for the still.
-            "settled_frames": to_frames(LEAD + 0.5, rate),
+            "settled_frames": to_frames(LEAD + 0.5, render_rate),
             "lane": 2,
         }
     )
@@ -148,8 +154,8 @@ def graphic_elements(
                 "name": callout.get("text", f"Callout {index}")[:60],
                 "only": f"callout:{index}",
                 "place_frames": to_frames(float(callout["start"]) - LEAD, rate),
-                "duration_frames": to_frames(LEAD + float(callout["dur"]) + 0.3 + TAIL, rate),
-                "settled_frames": to_frames(LEAD + 0.45, rate),
+                "duration_frames": to_frames(LEAD + float(callout["dur"]) + 0.3 + TAIL, render_rate),
+                "settled_frames": to_frames(LEAD + 0.45, render_rate),
                 "lane": 2,
             }
         )
@@ -429,10 +435,13 @@ def write_build_script(
     recipe_dir: Path,
     out_dir: Path,
     deinterlace: bool = False,
+    render_rate: FrameRate | None = None,
+    ntsc: bool = False,
 ) -> None:
     # One decode, N trim filters, one concat -- not N re-opens of the same
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
     # decoder per segment and falls over on a long cut list.
+    render_rate = render_rate or rate
     parts, labels = [], []
     for index, keep in enumerate(timeline.keeps):
         a = rate.to_seconds(keep["sf_start"])
@@ -469,13 +478,45 @@ def write_build_script(
         '  -map "[outv]" -map "[outa]" -c:v libx264 -crf 18 -preset medium \\',
         '  -c:a aac -b:a 192k "$OUT/rough_cut.mp4"',
         "",
-        "# 2. Full video -- cut plus graphics, baked.",
-        '#    clips/media/source.mp4 must exist for this to render.',
-        'npx hyperframes render "$RECIPE/clips" -o "$OUT/final.mp4"',
-        "",
+    ]
+
+    nominal = render_rate.num
+    if ntsc:
+        lines += [
+            "# NTSC rates cannot be rendered directly -- the engine takes 24/30/60",
+            f"# only. Graphics render at {nominal} and the timebase is re-stamped to",
+            f"# {rate.num}/{rate.den} with -itsscale 1.001. Frame COUNT is preserved and",
+            "# no pixels are resampled, so the assets stay frame-accurate.",
+            "conform() {  # conform <file>",
+            '  ffmpeg -y -itsscale 1.001 -i "$1" -c copy "${1%.mov}.ntsc.mov"',
+            '  mv "${1%.mov}.ntsc.mov" "$1"',
+            "}",
+            "",
+        ]
+    else:
+        lines += ["conform() { :; }  # integer rate, nothing to re-stamp", ""]
+
+    if ntsc:
+        lines += [
+            "# 2. Full video is built last for NTSC -- see step 6. The footage must",
+            "#    stay at its native rate, so it is composited with the overlay",
+            "#    rather than re-rendered through the frame extractor.",
+            "",
+        ]
+    else:
+        lines += [
+            "# 2. Full video -- cut plus graphics, baked.",
+            "#    clips/media/source.mp4 must exist for this to render.",
+            f'npx hyperframes render "$RECIPE/clips" --fps {nominal} -o "$OUT/final.mp4"',
+            "",
+        ]
+
+    lines += [
         "# 3. Flattened graphics overlay, full length, alpha.",
         "#    ProRes 4444, not WebM: WebM alpha shows as black in Resolve.",
-        'npx hyperframes render "$RECIPE/overlay" --format mov -o "$OUT/graphics/overlay.mov"',
+        f'npx hyperframes render "$RECIPE/overlay" --fps {nominal} --format mov '
+        '-o "$OUT/graphics/overlay.mov"',
+        'conform "$OUT/graphics/overlay.mov"',
         "",
         "# 4. Every layer as its own transparent asset. These are what the",
         "#    FCPXML timeline references -- render them before importing it.",
@@ -483,9 +524,10 @@ def write_build_script(
     for element in elements:
         slug = element["slug"]
         lines.append(
-            f'npx hyperframes render "$RECIPE/gfx/{slug}" --format mov '
+            f'npx hyperframes render "$RECIPE/gfx/{slug}" --fps {nominal} --format mov '
             f'-o "$OUT/graphics/{slug}.mov"'
         )
+        lines.append(f'conform "$OUT/graphics/{slug}.mov"')
     lines += ["", "# 5. Flat PNG stills, for when a still is easier to place than a clip."]
     for element in elements:
         slug = element["slug"]
@@ -494,6 +536,15 @@ def write_build_script(
             f'ffmpeg -y -ss {at:.3f} -i "$OUT/graphics/{slug}.mov" -frames:v 1 '
             f'"$OUT/graphics/stills/{slug}.png"'
         )
+    if ntsc:
+        lines += [
+            "",
+            "# 6. Full video: rough cut plus the conformed graphics overlay. Keeps",
+            "#    the footage at its native rate and never resamples it.",
+            'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
+            '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
+            '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
+        ]
     lines += ["", 'echo "Package built in $OUT"', ""]
 
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -598,6 +649,21 @@ def main() -> int:
     else:
         rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
 
+    # The render engine only accepts 24, 30 or 60 (renderOrchestrator.ts types
+    # it as `fps: 24 | 30 | 60`). NTSC rates are handled by rendering at the
+    # nominal integer and re-stamping the timebase afterwards, which is exact
+    # and resamples nothing. PAL has no such trick -- 25 and 50 simply cannot
+    # be rendered.
+    render_rate = FrameRate(rate.nominal, 1)
+    if rate.nominal not in (24, 30, 60):
+        raise SystemExit(
+            f"Frame rate {rate} cannot be rendered. `hyperframes render` accepts "
+            "only 24, 30 or 60, so 25 and 50 are out. Options: conform the source "
+            "to a supported rate first, or use --no-probe --fps 30 and retime the "
+            "graphics in your NLE."
+        )
+    ntsc = rate.den == 1001
+
     width = args.width or (info.width if info else 1920) or 1920
     height = args.height or (info.height if info else 1080) or 1080
     field_order = args.field_order or (info.field_order if info else "progressive")
@@ -648,6 +714,7 @@ def main() -> int:
         lt_start=0.6,
         lt_dur=4.6,
         caption_frames=timeline.total_frames if cues else 0,
+        render_rate=render_rate,
     )
 
     out = args.out.resolve()
@@ -672,7 +739,7 @@ def main() -> int:
             "--height",
             str(height),
             "--fps",
-            f"{rate.num}/{rate.den}",
+            str(render_rate.num),
             "--title",
             args.title,
             "--subtitle",
@@ -769,6 +836,10 @@ def main() -> int:
             ),
             "edit.edl": "CMX3600 conform list, cut only. Fallback if the FCPXML is rejected.",
             "captions.srt": "Import as a subtitle track.",
+            "edit_ledger.json": (
+                "Every removal and every word's source->output mapping. "
+                "The audit trail for sync."
+            ),
             "graphics/overlay.mov": "All graphics, full length, ProRes 4444 alpha.",
         },
         "cut": [
@@ -807,6 +878,98 @@ def main() -> int:
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
 
+    # Edit ledger: every removal, and every surviving word's source -> output
+    # mapping. Most recordings carry no timecode, so elapsed time from the head
+    # of the file is the only shared reference between the transcript, the cut
+    # and the delivered video. This file is that reference written down.
+    #
+    # Lip sync is preserved by construction, not by correction: picture and
+    # audio are cut from the same source at the same frame boundaries, so a
+    # word's mouth and its sound move together. The ledger is what lets you
+    # PROVE that after the fact, and re-derive captions if the cut changes.
+    ledger_words = []
+    for word in words:
+        text = str(word.get("text", "")).strip()
+        if not text:
+            continue
+        mapped = timeline.map_source(float(word["start"]))
+        if mapped is None:
+            ledger_words.append(
+                {
+                    "text": text,
+                    "sourceStart": round(float(word["start"]), 3),
+                    "sourceEnd": round(float(word["end"]), 3),
+                    "kept": False,
+                }
+            )
+            continue
+        out_frame, keep_index = mapped
+        end_frame = timeline.clamp_to_keep(float(word["end"]), keep_index)
+        ledger_words.append(
+            {
+                "text": text,
+                "sourceStart": round(float(word["start"]), 3),
+                "sourceEnd": round(float(word["end"]), 3),
+                "outputStart": round(rate.to_seconds(out_frame), 3),
+                "outputEnd": round(rate.to_seconds(end_frame), 3),
+                "shift": round(
+                    rate.to_seconds(out_frame) - float(word["start"]), 3
+                ),
+                "segment": keep_index,
+                "kept": True,
+            }
+        )
+
+    removed_frames = to_frames(edl_extent, rate) - timeline.total_frames
+    ledger = {
+        "reference": (
+            "Elapsed seconds from the first frame of the source file. Source "
+            "timecode is recorded when the file carries it, but nothing depends "
+            "on it -- these timings hold for any recording."
+        ),
+        "rate": f"{rate.num}/{rate.den}",
+        "sourceStartTC": frames_to_tc(source_start_frames, rate)
+        if source_start_frames
+        else None,
+        "totals": {
+            "sourceDuration": round(rate.to_seconds(source_duration_frames), 3),
+            "outputDuration": round(timeline.total_seconds, 3),
+            "removedDuration": round(rate.to_seconds(removed_frames), 3),
+            "segments": len(timeline.keeps),
+            "wordsKept": sum(1 for w in ledger_words if w["kept"]),
+            "wordsRemoved": sum(1 for w in ledger_words if not w["kept"]),
+        },
+        "segments": [
+            {
+                "index": index,
+                "sourceIn": round(rate.to_seconds(keep["sf_start"]), 3),
+                "sourceOut": round(rate.to_seconds(keep["sf_end"]), 3),
+                "outputIn": round(rate.to_seconds(keep["of_start"]), 3),
+                "outputOut": round(rate.to_seconds(keep["of_end"]), 3),
+                "frames": keep["frames"],
+                # How far this segment slides earlier once the cuts ahead of it
+                # are removed. Add it to any source time to get output time.
+                "shift": round(
+                    rate.to_seconds(keep["of_start"] - keep["sf_start"]), 3
+                ),
+            }
+            for index, keep in enumerate(timeline.keeps)
+        ],
+        "removals": [
+            {
+                "sourceIn": round(float(cut["start"]), 3),
+                "sourceOut": round(float(cut["end"]), 3),
+                "duration": round(float(cut["end"]) - float(cut["start"]), 3),
+                "reason": cut.get("reason", "unspecified"),
+            }
+            for cut in edl.get("cuts", [])
+        ],
+        "words": ledger_words,
+    }
+    (out / "edit_ledger.json").write_text(
+        json.dumps(ledger, indent=2) + "\n", encoding="utf-8"
+    )
+
     write_build_script(
         out / "build.sh",
         timeline=timeline,
@@ -816,12 +979,15 @@ def main() -> int:
         recipe_dir=HERE,
         out_dir=out,
         deinterlace=args.deinterlace,
+        render_rate=render_rate,
+        ntsc=ntsc,
     )
 
     print(f"Package scaffolded in {out}")
     print(f"  timeline      {fmt_float(timeline.total_seconds)}s, {len(timeline.keeps)} clips")
     print(f"  graphics      {len(elements)} assets → {gfx_root}")
     print(f"  captions      {len(cues)} cues")
+    print(f"  ledger        {len(ledger_words)} words mapped source -> output")
     print(f"  next          {out / 'build.sh'}")
     return 0
 
