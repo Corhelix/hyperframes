@@ -25,7 +25,16 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent.parent
 FILLERS = ["um", "uh", "er", "ah", "mm"]
-SPEECH = ["the", "system", "makes", "this", "visible", "before", "anyone", "asks", "for", "it"]
+# Real speech has far higher entropy than a ten-word list. A small vocabulary
+# produces accidental four-word repeats and makes the restart rule look broken
+# when it is the fixture that is wrong.
+SPEECH = (
+    "the system makes this visible before anyone asks for it because most teams treat "
+    "operations as a craft and that is exactly why nothing scales when you look at "
+    "where the work actually goes there is always a queue nobody owns which means "
+    "every handover costs a day and the people doing it cannot see the shape of what "
+    "they are inside so they optimise their own step and the whole gets slower"
+).split()
 
 results: list[tuple[str, str, str, bool]] = []
 
@@ -93,6 +102,44 @@ def main() -> int:
     removed = cut_list["detection"]["removedDuration"]
     check("Dead air removed", "> 0s", f"{removed:.0f}s", removed > 0)
     check("EDL authored by hand", "no", "no", True)
+
+    # Retakes: a spoken marker and a restarted sentence, both of which the
+    # speaker controls. Each must remove a whole attempt in one cut.
+    takes, t = [], 0.5
+    def say(text, dur=0.32, gap=0.06):
+        nonlocal t
+        takes.append({"text": text, "start": round(t, 3), "end": round(t + dur, 3)})
+        t += dur + gap
+    for word in "the bottleneck is the render pass and that is".split():
+        say(word)
+    t += 0.9
+    say("redo", 0.3)
+    t += 1.4
+    for word in "the bottleneck was never the render at all".split():
+        say(word)
+    t += 2.0
+    for word in "most teams treat editing as".split():
+        say(word)
+    t += 1.1
+    for word in "most teams treat editing as a manual craft".split():
+        say(word)
+    takes_file, takes_edl = work / "takes.json", work / "takes.edl.json"
+    takes_file.write_text(json.dumps(takes), encoding="utf-8")
+    run([sys.executable, str(HERE / "detect_cuts.py"), "--transcript", str(takes_file),
+         "--out", str(takes_edl), "--source-duration", str(t + 8)])
+    taken = json.loads(takes_edl.read_text())
+    survived = " ".join(
+        w["text"] for w in takes
+        if any(k["start"] <= w["start"] + 1e-6 and k["end"] >= w["end"] - 1e-6
+               for k in taken["keeps"])
+    )
+    check("Spoken redo drops the take", "not present", "dropped" if "render pass" not in survived
+          else "SURVIVED", "render pass" not in survived)
+    check("Restart drops the first attempt", "not present",
+          "dropped" if survived.count("most teams") == 1 else "SURVIVED",
+          survived.count("most teams") == 1)
+    retake_cuts = sum(1 for c in taken["cuts"] if c["reason"] == "retake")
+    check("Retakes cost one cut each", "2", retake_cuts, retake_cuts == 2)
 
     out = work / "out"
     run([sys.executable, str(HERE / "export_package.py"), "--edl", str(edl),

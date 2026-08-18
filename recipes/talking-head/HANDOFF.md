@@ -22,6 +22,12 @@ hyperframes transcribe → detect cuts → [ EDL ] → export_package.py → bui
   already in the CLI     upstream, not here        this folder
 ```
 
+## Before you record
+
+Read `RECORDING-PROTOCOL.md`. Two habits do most of the work: say "redo" when a
+take goes wrong, and restart a fluffed sentence with the same opening words.
+Both let the tool remove a whole bad attempt in a single cut instead of guessing.
+
 ## Prerequisites on the Mac
 
 | Need                 | Check                    | Notes                                                                                                                                    |

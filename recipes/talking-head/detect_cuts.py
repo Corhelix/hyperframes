@@ -44,7 +44,27 @@ AMBIGUOUS_PHRASES = [("you", "know"), ("sort", "of"), ("kind", "of"), ("i", "mea
 # Whisper emits these for music and noise. They are not speech.
 NON_SPEECH = re.compile(r"^[♪-♯�\s]+$")
 
+# Spoken markers that say "that attempt was wrong, the next one counts".
+# Cheap to say, unambiguous to detect, and worth far more than any heuristic:
+# one marker removes a whole bad take in a single cut.
+REDO_MARKERS = {"redo", "scratch"}
+REDO_PHRASES = [
+    ("scratch", "that"),
+    ("take", "two"),
+    ("start", "again"),
+    ("from", "the", "top"),
+    ("let", "me", "redo"),
+]
+
 PUNCTUATION = ".,!?;:\"'()[]{}…-–—"
+
+
+# Most specific reason wins when removals merge or a cut spans several.
+REASON_RANK = {"retake": 3, "filler": 2, "pace": 1, "silence": 0}
+
+
+def strongest(reasons) -> str:
+    return max(reasons, key=lambda r: REASON_RANK.get(r, 0), default="silence")
 
 
 def normalise(text: str) -> str:
@@ -130,19 +150,114 @@ def derive_thresholds(pacing: dict) -> tuple[float, float]:
     return round(min_silence, 3), round(target, 3)
 
 
+def find_retakes(
+    words: list[dict],
+    min_pause: float,
+    max_lookback: float,
+    min_repeat: int,
+) -> list[dict]:
+    """Whole bad takes, removed in one cut each.
+
+    Two signals, both of which the speaker controls:
+
+    Spoken marker. Saying "redo" or "scratch that" ends the attempt
+    explicitly. Everything from the start of that attempt through the
+    marker goes, and the attempt boundary is the last real pause before
+    it.
+
+    Repeated opening. Restarting a sentence after a pause, using the same
+    opening words, is a false start. The later attempt is the one that
+    counts, which is the last-take rule.
+
+    Both remove a run in a single cut rather than peppering the section
+    with small ones.
+    """
+    forms = [normalise(w["text"]) for w in words]
+    retakes: list[dict] = []
+
+    def take_start(index: int) -> float:
+        """Back to the start of the attempt the marker is rejecting.
+
+        Step past the marker's own word first. Saying "redo" after a beat
+        is the natural delivery, and without this the pause before the
+        marker reads as the take boundary and only the marker is removed.
+        """
+        floor = words[index]["start"] - max_lookback
+        position = max(0, index - 1)
+        while position > 0:
+            gap = words[position]["start"] - words[position - 1]["end"]
+            if gap >= min_pause or words[position - 1]["start"] < floor:
+                break
+            position -= 1
+        return words[position]["start"]
+
+    for index, form in enumerate(forms):
+        hit = form in REDO_MARKERS or any(
+            tuple(forms[index : index + len(phrase)]) == phrase for phrase in REDO_PHRASES
+        )
+        if not hit:
+            continue
+        span = next(
+            (len(p) for p in REDO_PHRASES if tuple(forms[index : index + len(p)]) == p), 1
+        )
+        retakes.append(
+            {
+                "start": take_start(index),
+                "end": words[min(index + span - 1, len(words) - 1)]["end"],
+                "reason": "retake",
+            }
+        )
+
+    for index in range(len(words) - 1):
+        gap = words[index + 1]["start"] - words[index]["end"]
+        if gap < min_pause:
+            continue
+        after = forms[index + 1 : index + 1 + min_repeat]
+        if len(after) < min_repeat:
+            continue
+        # Search back only inside the run that just ended. A restart repeats
+        # what was said moments ago; an identical phrase from earlier in the
+        # video is the speaker making the same point again, not a false start.
+        # Without this bound a low-entropy transcript matches by chance and
+        # the rule deletes the programme.
+        for candidate in range(index + 1 - min_repeat, -1, -1):
+            if words[index]["end"] - words[candidate]["start"] > max_lookback:
+                break
+            if candidate > 0 and (
+                words[candidate]["start"] - words[candidate - 1]["end"] >= min_pause
+            ):
+                if forms[candidate : candidate + min_repeat] == after:
+                    retakes.append(
+                        {
+                            "start": words[candidate]["start"],
+                            "end": words[index]["end"],
+                            "reason": "retake",
+                        }
+                    )
+                break
+            if forms[candidate : candidate + min_repeat] == after:
+                retakes.append(
+                    {"start": words[candidate]["start"], "end": words[index]["end"], "reason": "retake"}
+                )
+                break
+
+    return retakes
+
+
 def build_removals(
     words: list[dict],
     fillers: set[int],
     min_silence: float,
     extent: float,
     pause_target: float,
+    retakes: list[dict] | None = None,
 ) -> list[dict]:
     """Intervals to remove, before any padding or merging.
 
     A long pause is shortened to `pause_target`, not deleted. Removing it
     outright is the difference between a tight edit and an airless one.
     """
-    removals: list[dict] = []
+    removals: list[dict] = list(retakes or [])
 
     for index in sorted(fillers):
         removals.append({"start": words[index]["start"], "end": words[index]["end"], "reason": "filler"})
@@ -176,8 +291,7 @@ def build_removals(
     for interval in removals:
         if merged and interval["start"] <= merged[-1]["end"] + 1e-9:
             merged[-1]["end"] = max(merged[-1]["end"], interval["end"])
-            if interval["reason"] == "filler":
-                merged[-1]["reason"] = "filler"
+            merged[-1]["reason"] = strongest([merged[-1]["reason"], interval["reason"]])
         else:
             merged.append(dict(interval))
     return merged
@@ -263,7 +377,7 @@ def label_cuts(keeps: list[dict], removals: list[dict], extent: float) -> list[d
         overlapping = [
             r for r in removals if r["start"] < interval["end"] and r["end"] > interval["start"]
         ]
-        reason = "filler" if any(r["reason"] == "filler" for r in overlapping) else "silence"
+        reason = strongest([r["reason"] for r in overlapping])
         cuts.append(
             {
                 "start": round(interval["start"], 3),
@@ -272,6 +386,16 @@ def label_cuts(keeps: list[dict], removals: list[dict], extent: float) -> list[d
             }
         )
     return cuts
+
+
+def removed_indices(words: list[dict], fillers: set[int], retakes: list[dict]) -> set[int]:
+    """Every word the edit intends to lose: fillers plus whole bad takes."""
+    gone = set(fillers)
+    for span in retakes:
+        for index, word in enumerate(words):
+            if word["start"] >= span["start"] - 1e-6 and word["end"] <= span["end"] + 1e-6:
+                gone.add(index)
+    return gone
 
 
 def assert_no_mid_word_cuts(keeps: list[dict], words: list[dict], fillers: set[int]) -> None:
@@ -331,6 +455,34 @@ def main() -> int:
     parser.add_argument("--min-gap", type=float, default=0.25, help="Shorter cuts are collapsed.")
     parser.add_argument("--min-keep", type=float, default=0.4, help="Shorter sections are dropped.")
     parser.add_argument(
+        "--retakes",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help=(
+            "Remove bad takes. Say `redo` or `scratch that` and the attempt before "
+            "it goes; restart a sentence after a pause and the earlier attempt goes. "
+            "One cut each, not many."
+        ),
+    )
+    parser.add_argument(
+        "--restart-pause",
+        type=float,
+        default=0.5,
+        help="Pause after which repeated opening words count as a restart.",
+    )
+    parser.add_argument(
+        "--max-retake",
+        type=float,
+        default=30.0,
+        help="Seconds a single retake may reach back. Stops a stray marker eating the video.",
+    )
+    parser.add_argument(
+        "--min-repeat",
+        type=int,
+        default=4,
+        help="Words that must match across a pause before it counts as a restart.",
+    )
+    parser.add_argument(
         "--aggressive-fillers",
         action="store_true",
         help="Also remove like, so, right, basically, actually, literally, you know, sort of.",
@@ -350,15 +502,22 @@ def main() -> int:
     pause_target = auto_target if args.pause_target == "auto" else float(args.pause_target)
 
     fillers = mark_fillers(words, args.aggressive_fillers)
-    removals = build_removals(words, fillers, min_silence, extent, pause_target)
+    retakes = (
+        find_retakes(words, args.restart_pause, args.max_retake, args.min_repeat)
+        if args.retakes
+        else []
+    )
+    gone = removed_indices(words, fillers, retakes)
+
+    removals = build_removals(words, fillers, min_silence, extent, pause_target, retakes)
     keeps = complement(removals, extent)
     apply_padding(keeps, removals, args.pad, extent)
-    keeps = drop_wordless_keeps(keeps, words, fillers)
+    keeps = drop_wordless_keeps(keeps, words, gone)
     keeps = merge_short_gaps(keeps, removals, args.min_gap)
     keeps = [k for k in keeps if k["end"] - k["start"] >= args.min_keep] or keeps[:1]
     if not keeps:
         raise SystemExit("Detection removed everything. Check --min-silence and the transcript.")
-    assert_no_mid_word_cuts(keeps, words, fillers)
+    assert_no_mid_word_cuts(keeps, words, gone)
 
     keeps = [{"start": round(k["start"], 3), "end": round(k["end"], 3)} for k in keeps]
     cuts = label_cuts(keeps, removals, extent)
@@ -383,6 +542,8 @@ def main() -> int:
             "removedDuration": round(extent - kept, 3),
             "words": len(words),
             "fillersRemoved": len(fillers),
+            "retakesRemoved": len(retakes),
+            "wordsRemoved": len(gone),
         },
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -398,9 +559,15 @@ def main() -> int:
     print(f"  keeps         {len(keeps)} sections, {kept:.1f}s")
     print(f"  removed       {extent - kept:.1f}s ({(extent - kept) / extent * 100:.1f}%)")
     print(f"  fillers       {len(fillers)} words")
-    by_reason = {r: sum(1 for c in cuts if c["reason"] == r) for r in ("filler", "pace", "silence")}
-    print(f"  cuts          {len(cuts)} total: {by_reason['filler']} filler, "
-          f"{by_reason['pace']} pause shortened, {by_reason['silence']} head/tail")
+    by_reason = {
+        r: sum(1 for c in cuts if c["reason"] == r)
+        for r in ("retake", "filler", "pace", "silence")
+    }
+    print(
+        f"  cuts          {len(cuts)} total: {by_reason['retake']} retake, "
+        f"{by_reason['filler']} filler, {by_reason['pace']} pause shortened, "
+        f"{by_reason['silence']} head/tail"
+    )
     return 0
 
 
