@@ -50,10 +50,18 @@ from build_composition import (
     TAIL,
     Timeline,
     build_cues,
-    fmt_seconds,
+    fmt_float,
     load_json,
     to_frames,
     validate_keeps,
+)
+from mediainfo import (
+    FCPXML_FIELD_ORDER,
+    FrameRate,
+    frames_to_tc,
+    parse_rate,
+    probe,
+    tc_to_frames,
 )
 
 HERE = Path(__file__).resolve().parent
@@ -64,30 +72,28 @@ HERE = Path(__file__).resolve().parent
 # ---------------------------------------------------------------------------
 
 
-def timecode(frames: int, fps: int) -> str:
-    """Frames -> HH:MM:SS:FF, non-drop.
-
-    Drop-frame is deliberately not emitted. At 29.97 or 23.976 a non-drop
-    list and a drop-frame list disagree by ~3.6s/hour, and silently
-    conforming to the wrong one is the classic way an EDL round-trip
-    drifts. --fps is validated as an integer for the same reason.
-    """
-    frames = max(0, int(frames))
-    ff = frames % fps
-    total_seconds = frames // fps
-    return f"{total_seconds // 3600:02d}:{(total_seconds // 60) % 60:02d}:{total_seconds % 60:02d}:{ff:02d}"
+def timecode(frames: int, rate: FrameRate) -> str:
+    """Frame count -> timecode, drop-frame or not according to the rate."""
+    return frames_to_tc(frames, rate)
 
 
-def srt_time(frames: int, fps: int) -> str:
-    total_ms = int(round(frames * 1000 / fps))
+def srt_time(frames: int, rate: FrameRate) -> str:
+    total_ms = int(round(rate.to_seconds(frames) * 1000))
     ms = total_ms % 1000
     total_seconds = total_ms // 1000
     return f"{total_seconds // 3600:02d}:{(total_seconds // 60) % 60:02d}:{total_seconds % 60:02d},{ms:03d}"
 
 
-def rational(frames: int, fps: int) -> str:
-    """FCPXML rational time, e.g. 264/30s. Exact -- no decimal rounding."""
-    return "0s" if frames == 0 else f"{frames}/{fps}s"
+def rational(frames: int, rate: FrameRate) -> str:
+    """FCPXML rational time.
+
+    The denominator is the rate's timescale, so 29.97 emits 1001/30000s per
+    frame and every time value stays exact. Writing 0.0333667s instead is
+    how an NLE ends up a frame out over an hour.
+    """
+    if frames == 0:
+        return "0s"
+    return f"{frames * rate.den}/{rate.num}s"
 
 
 # ---------------------------------------------------------------------------
@@ -97,7 +103,7 @@ def rational(frames: int, fps: int) -> str:
 
 def graphic_elements(
     callouts: list[dict],
-    fps: int,
+    rate: FrameRate,
     lt_start: float,
     lt_dur: float,
     caption_frames: int = 0,
@@ -127,10 +133,10 @@ def graphic_elements(
             "slug": "lower-third",
             "name": "Lower third",
             "only": "lower-third",
-            "place_frames": to_frames(lt_start - LEAD, fps),
-            "duration_frames": to_frames(LEAD + lt_dur + 0.4 + TAIL, fps),
+            "place_frames": to_frames(lt_start - LEAD, rate),
+            "duration_frames": to_frames(LEAD + lt_dur + 0.4 + TAIL, rate),
             # The moment the graphic is fully on screen, used for the still.
-            "settled_frames": to_frames(LEAD + 0.5, fps),
+            "settled_frames": to_frames(LEAD + 0.5, rate),
             "lane": 2,
         }
     )
@@ -141,9 +147,9 @@ def graphic_elements(
                 "slug": f"callout-{index:02d}",
                 "name": callout.get("text", f"Callout {index}")[:60],
                 "only": f"callout:{index}",
-                "place_frames": to_frames(float(callout["start"]) - LEAD, fps),
-                "duration_frames": to_frames(LEAD + float(callout["dur"]) + 0.3 + TAIL, fps),
-                "settled_frames": to_frames(LEAD + 0.45, fps),
+                "place_frames": to_frames(float(callout["start"]) - LEAD, rate),
+                "duration_frames": to_frames(LEAD + float(callout["dur"]) + 0.3 + TAIL, rate),
+                "settled_frames": to_frames(LEAD + 0.45, rate),
                 "lane": 2,
             }
         )
@@ -156,12 +162,12 @@ def graphic_elements(
 # ---------------------------------------------------------------------------
 
 
-def write_srt(path: Path, cues: list[dict], fps: int) -> None:
+def write_srt(path: Path, cues: list[dict], rate: FrameRate) -> None:
     blocks = []
     for index, cue in enumerate(cues, start=1):
         blocks.append(
             f"{index}\n"
-            f"{srt_time(cue['start'], fps)} --> {srt_time(cue['end'], fps)}\n"
+            f"{srt_time(cue['start'], rate)} --> {srt_time(cue['end'], rate)}\n"
             f"{cue['text']}\n"
         )
     path.write_text("\n".join(blocks), encoding="utf-8")
@@ -172,13 +178,32 @@ def write_srt(path: Path, cues: list[dict], fps: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def write_edl(path: Path, timeline: Timeline, fps: int, title: str, reel: str) -> None:
-    lines = [f"TITLE: {title}", "FCM: NON-DROP FRAME", ""]
+def write_edl(
+    path: Path,
+    timeline: Timeline,
+    rate: FrameRate,
+    title: str,
+    reel: str,
+    source_start_frames: int = 0,
+    record_start_frames: int = 0,
+) -> None:
+    """CMX3600 conform list.
+
+    Source timecode is offset by the file's own start TC, so the list lines
+    up against the camera original rather than against a file that happens
+    to begin at zero.
+    """
+    fcm = "DROP FRAME" if rate.drop else "NON-DROP FRAME"
+    lines = [f"TITLE: {title}", f"FCM: {fcm}", ""]
     for index, keep in enumerate(timeline.keeps, start=1):
+        src_in = source_start_frames + keep["sf_start"]
+        src_out = source_start_frames + keep["sf_end"]
+        rec_in = record_start_frames + keep["of_start"]
+        rec_out = record_start_frames + keep["of_end"]
         lines.append(
             f"{index:03d}  {reel:<8} AA/V  C        "
-            f"{timecode(keep['sf_start'], fps)} {timecode(keep['sf_end'], fps)} "
-            f"{timecode(keep['of_start'], fps)} {timecode(keep['of_end'], fps)}"
+            f"{timecode(src_in, rate)} {timecode(src_out, rate)} "
+            f"{timecode(rec_in, rate)} {timecode(rec_out, rate)}"
         )
         lines.append(f"* FROM CLIP NAME: {title}")
         lines.append("")
@@ -194,11 +219,14 @@ def write_fcpxml(
     path: Path,
     *,
     timeline: Timeline,
-    fps: int,
+    rate: FrameRate,
     width: int,
     height: int,
     source_file: Path,
     source_duration_frames: int,
+    source_start_frames: int = 0,
+    field_order: str = "progressive",
+    record_start_frames: int = 0,
     elements: list[dict],
     graphics_dir: Path,
     project_name: str,
@@ -221,24 +249,31 @@ def write_fcpxml(
     fcpxml = ET.Element("fcpxml", version="1.9")
     resources = ET.SubElement(fcpxml, "resources")
 
-    ET.SubElement(
-        resources,
-        "format",
-        id="r0",
-        name=f"FFVideoFormat{height}p{fps}",
-        frameDuration=f"1/{fps}s",
-        width=str(width),
-        height=str(height),
-        colorSpace="1-1-1 (Rec. 709)",
-    )
+    # frameDuration carries the exact rational: 1001/30000s for 29.97, not a
+    # rounded decimal. fieldOrder is set only for interlaced sources -- FCPXML
+    # treats its absence as progressive.
+    scan = "i" if field_order in FCPXML_FIELD_ORDER else "p"
+    format_attrs = {
+        "id": "r0",
+        "name": f"FFVideoFormat{height}{scan}{rate.num / rate.den:g}".replace(".", ""),
+        "frameDuration": f"{rate.den}/{rate.num}s",
+        "width": str(width),
+        "height": str(height),
+        "colorSpace": "1-1-1 (Rec. 709)",
+    }
+    if field_order in FCPXML_FIELD_ORDER:
+        format_attrs["fieldOrder"] = FCPXML_FIELD_ORDER[field_order]
+    ET.SubElement(resources, "format", **format_attrs)
+
+    tc_format = "DF" if rate.drop else "NDF"
 
     source_asset = ET.SubElement(
         resources,
         "asset",
         id="r1",
         name=source_file.stem,
-        start="0s",
-        duration=rational(source_duration_frames, fps),
+        start=rational(source_start_frames, rate),
+        duration=rational(source_duration_frames, rate),
         hasVideo="1",
         hasAudio="1",
         audioSources="1",
@@ -259,7 +294,7 @@ def write_fcpxml(
             id="rRC",
             name="rough_cut",
             start="0s",
-            duration=rational(timeline.total_frames, fps),
+            duration=rational(timeline.total_frames, rate),
             hasVideo="1",
             hasAudio="1",
             audioSources="1",
@@ -281,7 +316,7 @@ def write_fcpxml(
             id=element["ref"],
             name=element["slug"],
             start="0s",
-            duration=rational(element["duration_frames"], fps),
+            duration=rational(element["duration_frames"], rate),
             hasVideo="1",
             format="r0",
         )
@@ -299,9 +334,9 @@ def write_fcpxml(
         project,
         "sequence",
         format="r0",
-        duration=rational(timeline.total_frames, fps),
-        tcStart="0s",
-        tcFormat="NDF",
+        duration=rational(timeline.total_frames, rate),
+        tcStart=rational(record_start_frames, rate),
+        tcFormat=tc_format,
         audioLayout="stereo",
         audioRate="48k",
     )
@@ -316,9 +351,9 @@ def write_fcpxml(
             name=f"{project_name} rough cut",
             offset="0s",
             start="0s",
-            duration=rational(timeline.total_frames, fps),
+            duration=rational(timeline.total_frames, rate),
             format="r0",
-            tcFormat="NDF",
+            tcFormat=tc_format,
         )
         # (element, its record-in on the sequence, its own `start` value)
         spine_clips.append((clip, 0, 0))
@@ -329,13 +364,13 @@ def write_fcpxml(
                 "asset-clip",
                 ref="r1",
                 name=f"{source_file.stem} {index}",
-                offset=rational(keep["of_start"], fps),
-                start=rational(keep["sf_start"], fps),
-                duration=rational(keep["frames"], fps),
+                offset=rational(keep["of_start"], rate),
+                start=rational(source_start_frames + keep["sf_start"], rate),
+                duration=rational(keep["frames"], rate),
                 format="r0",
-                tcFormat="NDF",
+                tcFormat=tc_format,
             )
-            spine_clips.append((clip, keep["of_start"], keep["sf_start"]))
+            spine_clips.append((clip, keep["of_start"], source_start_frames + keep["sf_start"]))
 
     # Every graphic layer rides as a connected clip. A connected clip's offset
     # is expressed in its PARENT's local time base -- measured from the parent's
@@ -365,9 +400,9 @@ def write_fcpxml(
             ref=element["ref"],
             lane=str(element.get("lane", 1)),
             name=element["name"],
-            offset=rational(local_start + (place - record_in), fps),
+            offset=rational(local_start + (place - record_in), rate),
             start="0s",
-            duration=rational(element["duration_frames"], fps),
+            duration=rational(element["duration_frames"], rate),
             format="r0",
         )
 
@@ -388,19 +423,20 @@ def write_build_script(
     path: Path,
     *,
     timeline: Timeline,
-    fps: int,
+    rate: FrameRate,
     source_file: Path,
     elements: list[dict],
     recipe_dir: Path,
     out_dir: Path,
+    deinterlace: bool = False,
 ) -> None:
     # One decode, N trim filters, one concat -- not N re-opens of the same
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
     # decoder per segment and falls over on a long cut list.
     parts, labels = [], []
     for index, keep in enumerate(timeline.keeps):
-        a = keep["sf_start"] / fps
-        b = keep["sf_end"] / fps
+        a = rate.to_seconds(keep["sf_start"])
+        b = rate.to_seconds(keep["sf_end"])
         parts.append(f"[0:v]trim=start={a:.6f}:end={b:.6f},setpts=PTS-STARTPTS[v{index}]")
         parts.append(f"[0:a]atrim=start={a:.6f}:end={b:.6f},asetpts=PTS-STARTPTS[a{index}]")
         labels.append(f"[v{index}][a{index}]")
@@ -416,6 +452,18 @@ def write_build_script(
         f'SRC="{source_file}"',
         'mkdir -p "$OUT/graphics/stills"',
         "",
+    ]
+    if deinterlace:
+        lines += [
+            "# 0. Deinterlace to a progressive intermediate and cut from that.",
+            "#    yadif mode=0 emits one frame per input frame, so the frame count",
+            "#    and therefore every timecode in the EDL and FCPXML still hold.",
+            'ffmpeg -y -i "$SRC" -vf yadif=mode=0 -c:v prores_ks -profile:v 3 \\',
+            '  -c:a pcm_s16le "$OUT/source_progressive.mov"',
+            'SRC="$OUT/source_progressive.mov"',
+            "",
+        ]
+    lines += [
         "# 1. Rough cut -- the cut only, no graphics. Single decode.",
         'ffmpeg -y -i "$SRC" -filter_complex "' + filtergraph + '" \\',
         '  -map "[outv]" -map "[outa]" -c:v libx264 -crf 18 -preset medium \\',
@@ -441,7 +489,7 @@ def write_build_script(
     lines += ["", "# 5. Flat PNG stills, for when a still is easier to place than a clip."]
     for element in elements:
         slug = element["slug"]
-        at = element["settled_frames"] / fps
+        at = rate.to_seconds(element["settled_frames"])
         lines.append(
             f'ffmpeg -y -ss {at:.3f} -i "$OUT/graphics/{slug}.mov" -frames:v 1 '
             f'"$OUT/graphics/stills/{slug}.png"'
@@ -474,9 +522,41 @@ def main() -> int:
         type=float,
         help="Source length in seconds. Defaults to the furthest point the EDL mentions.",
     )
-    parser.add_argument("--fps", type=int)
-    parser.add_argument("--width", type=int, default=1920)
-    parser.add_argument("--height", type=int, default=1080)
+    parser.add_argument("--fps", help="Override the probed rate: 25, 29.97, 30000/1001.")
+    parser.add_argument(
+        "--drop-frame",
+        dest="drop_frame",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Force drop-frame timecode on or off. Defaults per rate.",
+    )
+    parser.add_argument("--start-tc", help="Override the probed source start timecode.")
+    parser.add_argument(
+        "--record-start-tc",
+        default="00:00:00:00",
+        help="Timeline start timecode. Many houses conform to 01:00:00:00.",
+    )
+    parser.add_argument(
+        "--field-order",
+        choices=("progressive", "tt", "bb", "tb", "bt"),
+        help="Override the probed field order.",
+    )
+    parser.add_argument(
+        "--deinterlace",
+        action="store_true",
+        help=(
+            "Add a yadif prep pass to build.sh and cut from the progressive "
+            "intermediate. Required for interlaced sources -- the render engine "
+            "has no deinterlacer, so fields would come through combed."
+        ),
+    )
+    parser.add_argument(
+        "--no-probe",
+        action="store_true",
+        help="Skip ffprobe. Then --fps and the rest must be supplied explicitly.",
+    )
+    parser.add_argument("--width", type=int)
+    parser.add_argument("--height", type=int)
     parser.add_argument("--words-per-cue", type=int, default=5)
     parser.add_argument("--min-words", type=int, default=3)
     parser.add_argument("--gap", type=float, default=0.35)
@@ -501,9 +581,55 @@ def main() -> int:
         raise SystemExit("EDL has no `keeps` (or `ranges`).")
     validate_keeps(keeps)
 
-    fps = args.fps or int(edl.get("fps", 30))
-    if abs(fps - round(fps)) > 1e-9:
-        raise SystemExit("Only integer frame rates are supported. See the drop-frame note.")
+    # Read the format from the file rather than assuming it. Rate, start
+    # timecode and field order all change the output, and all three are
+    # routinely non-default: NTSC rates are fractional, camera masters carry a
+    # real start TC, and broadcast sources are often interlaced.
+    info = None
+    if not args.no_probe:
+        info = probe(args.source_file)
+
+    if args.fps:
+        rate = parse_rate(args.fps, drop=args.drop_frame)
+    elif info is not None:
+        rate = info.rate if args.drop_frame is None else parse_rate(
+            f"{info.rate.num}/{info.rate.den}", drop=args.drop_frame
+        )
+    else:
+        rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
+
+    width = args.width or (info.width if info else 1920) or 1920
+    height = args.height or (info.height if info else 1080) or 1080
+    field_order = args.field_order or (info.field_order if info else "progressive")
+
+    if args.start_tc:
+        source_start_frames = tc_to_frames(args.start_tc, rate)
+    elif info is not None and info.start_tc:
+        source_start_frames = info.start_tc_frames
+    else:
+        source_start_frames = 0
+    record_start_frames = tc_to_frames(args.record_start_tc, rate)
+
+    interlaced = field_order in FCPXML_FIELD_ORDER
+    if info is not None:
+        print(f"Probed {args.source_file.name}:")
+        print(f"  rate          {rate}")
+        print(f"  scan          {field_order}")
+        print(f"  size          {width}x{height}")
+        print(f"  start TC      {info.start_tc or '(none, assuming 0)'}")
+        if info.vfr:
+            print(
+                "  WARNING       variable frame rate detected. A VFR source cannot "
+                "be conformed frame-accurately -- transcode to CFR first."
+            )
+    if interlaced and not args.deinterlace:
+        print(
+            f"  WARNING       source is interlaced ({field_order}) and --deinterlace "
+            "was not passed.\n"
+            "                The render engine has no deinterlacer, so graphics "
+            "renders will comb.\n"
+            "                Re-run with --deinterlace to add a yadif prep pass."
+        )
 
     words: list[dict] = []
     if args.transcript:
@@ -511,14 +637,14 @@ def main() -> int:
         words = transcript if isinstance(transcript, list) else transcript.get("words", [])
 
     callouts = load_json(args.callouts) if args.callouts else []
-    timeline = Timeline(keeps, fps)
+    timeline = Timeline(keeps, rate)
     if timeline.total_frames <= 0:
         raise SystemExit("EDL keeps produced a zero-length timeline.")
 
     cues = build_cues(words, timeline, args.words_per_cue, args.min_words, args.gap) if words else []
     elements = graphic_elements(
         callouts,
-        fps,
+        rate,
         lt_start=0.6,
         lt_dur=4.6,
         caption_frames=timeline.total_frames if cues else 0,
@@ -542,11 +668,11 @@ def main() -> int:
             "--comp-id",
             f"gfx-{element['slug']}",
             "--width",
-            str(args.width),
+            str(width),
             "--height",
-            str(args.height),
+            str(height),
             "--fps",
-            str(fps),
+            f"{rate.num}/{rate.den}",
             "--title",
             args.title,
             "--subtitle",
@@ -574,27 +700,41 @@ def main() -> int:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
 
     if cues:
-        write_srt(out / "captions.srt", cues, fps)
-    write_edl(out / "edit.edl", timeline, fps, args.project_name, args.reel[:8])
-
-    source_duration_frames = (
-        to_frames(args.source_duration, fps)
-        if args.source_duration
-        else to_frames(
-            max(
-                [float(k["end"]) for k in keeps]
-                + [float(c["end"]) for c in edl.get("cuts", [])]
-            ),
-            fps,
-        )
+        write_srt(out / "captions.srt", cues, rate)
+    write_edl(
+        out / "edit.edl",
+        timeline,
+        rate,
+        args.project_name,
+        args.reel[:8],
+        source_start_frames=source_start_frames,
+        record_start_frames=record_start_frames,
     )
+
+    # Prefer the real file length. Falling back to the EDL's extent caps the
+    # asset at the last cut point, which silently removes the handles that are
+    # the reason for referencing the original in the first place.
+    edl_extent = max(
+        [float(k["end"]) for k in keeps] + [float(c["end"]) for c in edl.get("cuts", [])]
+    )
+    if args.source_duration:
+        source_duration_frames = to_frames(args.source_duration, rate)
+    elif info is not None and info.duration:
+        source_duration_frames = to_frames(info.duration, rate)
+    else:
+        source_duration_frames = to_frames(edl_extent, rate)
+        print(
+            "  NOTE          source length unknown, using the EDL's extent "
+            f"({edl_extent}s). No handles past the last cut -- pass "
+            "--source-duration or let ffprobe read the file."
+        )
 
     write_fcpxml(
         out / "edit.fcpxml",
         timeline=timeline,
-        fps=fps,
-        width=args.width,
-        height=args.height,
+        rate=rate,
+        width=width,
+        height=height,
         source_file=args.source_file,
         source_duration_frames=source_duration_frames,
         elements=elements,
@@ -602,15 +742,24 @@ def main() -> int:
         project_name=args.project_name,
         v1=args.v1,
         rough_cut=out / "rough_cut.mp4",
+        source_start_frames=source_start_frames,
+        field_order=field_order,
+        record_start_frames=record_start_frames,
     )
 
     manifest = {
         "project": args.project_name,
-        "fps": fps,
+        "fps": f"{rate.num}/{rate.den}",
+        "fpsDecimal": round(rate.num / rate.den, 4),
+        "dropFrame": rate.drop,
+        "fieldOrder": field_order,
+        "interlaced": interlaced,
+        "sourceStartTC": frames_to_tc(source_start_frames, rate),
+        "recordStartTC": frames_to_tc(record_start_frames, rate),
         "resolution": [args.width, args.height],
-        "timelineDuration": round(timeline.total_frames / fps, 3),
+        "timelineDuration": round(timeline.total_seconds, 3),
         "sourceFile": str(args.source_file),
-        "sourceDuration": round(source_duration_frames / fps, 3),
+        "sourceDuration": round(rate.to_seconds(source_duration_frames), 3),
         "deliverables": {
             "final.mp4": "Full video — cut with graphics baked in.",
             "rough_cut.mp4": "The cut only, no graphics.",
@@ -625,12 +774,12 @@ def main() -> int:
         "cut": [
             {
                 "index": index,
-                "sourceIn": round(keep["sf_start"] / fps, 3),
-                "sourceOut": round(keep["sf_end"] / fps, 3),
-                "recordIn": round(keep["of_start"] / fps, 3),
-                "recordOut": round(keep["of_end"] / fps, 3),
-                "sourceInTC": timecode(keep["sf_start"], fps),
-                "recordInTC": timecode(keep["of_start"], fps),
+                "sourceIn": round(rate.to_seconds(keep["sf_start"]), 3),
+                "sourceOut": round(rate.to_seconds(keep["sf_end"]), 3),
+                "recordIn": round(rate.to_seconds(keep["of_start"]), 3),
+                "recordOut": round(rate.to_seconds(keep["of_end"]), 3),
+                "sourceInTC": timecode(source_start_frames + keep["sf_start"], rate),
+                "recordInTC": timecode(record_start_frames + keep["of_start"], rate),
             }
             for index, keep in enumerate(timeline.keeps)
         ],
@@ -640,9 +789,9 @@ def main() -> int:
                 "name": element["name"],
                 "clip": f"graphics/{element['slug']}.mov",
                 "still": f"graphics/stills/{element['slug']}.png",
-                "placeAt": round(element["place_frames"] / fps, 3),
-                "placeAtTC": timecode(element["place_frames"], fps),
-                "duration": round(element["duration_frames"] / fps, 3),
+                "placeAt": round(rate.to_seconds(element["place_frames"]), 3),
+                "placeAtTC": timecode(record_start_frames + element["place_frames"], rate),
+                "duration": round(rate.to_seconds(element["duration_frames"]), 3),
                 "lane": 1,
             }
             for element in elements
@@ -650,8 +799,8 @@ def main() -> int:
         "captions": [
             {
                 "text": cue["text"],
-                "start": round(cue["start"] / fps, 3),
-                "end": round(cue["end"] / fps, 3),
+                "start": round(rate.to_seconds(cue["start"]), 3),
+                "end": round(rate.to_seconds(cue["end"]), 3),
             }
             for cue in cues
         ],
@@ -661,15 +810,16 @@ def main() -> int:
     write_build_script(
         out / "build.sh",
         timeline=timeline,
-        fps=fps,
+        rate=rate,
         source_file=args.source_file,
         elements=elements,
         recipe_dir=HERE,
         out_dir=out,
+        deinterlace=args.deinterlace,
     )
 
     print(f"Package scaffolded in {out}")
-    print(f"  timeline      {fmt_seconds(timeline.total_frames, fps)}s, {len(timeline.keeps)} clips")
+    print(f"  timeline      {fmt_float(timeline.total_seconds)}s, {len(timeline.keeps)} clips")
     print(f"  graphics      {len(elements)} assets → {gfx_root}")
     print(f"  captions      {len(cues)} cues")
     print(f"  next          {out / 'build.sh'}")

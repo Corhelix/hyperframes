@@ -43,6 +43,8 @@ import json
 import sys
 from pathlib import Path
 
+from mediainfo import FrameRate, parse_rate
+
 # Sentence-final punctuation ends a caption cue.
 SENTENCE_END = (".", "!", "?", "…")
 
@@ -66,30 +68,47 @@ TAIL = 0.2
 # ---------------------------------------------------------------------------
 
 
-def to_frames(seconds: float, fps: int) -> int:
-    return int(round(float(seconds) * fps))
+def to_frames(seconds: float, rate: FrameRate) -> int:
+    return rate.to_frames(seconds)
 
 
-def fmt_seconds(frames: int, fps: int) -> str:
-    """Frame count -> a compact decimal string for an HTML attribute."""
-    value = round(frames / fps, 6)
-    text = f"{value:.6f}".rstrip("0").rstrip(".")
-    return text or "0"
+def fmt_float(value: float) -> str:
+    """Shortest decimal that reparses to the identical double.
+
+    Not a fixed number of places. At 29.97 a frame boundary is
+    1001/30000s, which does not terminate in decimal, so rounding each
+    clip's start and duration independently lets `start + duration` land a
+    hair past the next clip's start -- and overlapping_clips_same_track is
+    a strict `end > start`. Emitting the exact doubles this script already
+    accumulated keeps the arithmetic identical on both sides.
+    """
+    text = repr(float(value))
+    return text[:-2] if text.endswith(".0") else text
+
+
+def fmt_seconds(frames: int, rate: FrameRate) -> str:
+    """Frame count -> a decimal string for an HTML attribute."""
+    return fmt_float(rate.to_seconds(frames))
 
 
 class Timeline:
     """Source <-> output time mapping built from the EDL keeps."""
 
-    def __init__(self, keeps: list[dict], fps: int) -> None:
-        self.fps = fps
+    def __init__(self, keeps: list[dict], rate: FrameRate) -> None:
+        self.rate = rate
         self.keeps: list[dict] = []
         cursor = 0
+        # Seconds are accumulated alongside the frame counts, not derived from
+        # them afterwards, so each clip's start is literally the previous
+        # start plus the previous duration in float arithmetic.
+        cursor_seconds = 0.0
         for keep in keeps:
-            sf_start = to_frames(keep["start"], fps)
-            sf_end = to_frames(keep["end"], fps)
+            sf_start = to_frames(keep["start"], rate)
+            sf_end = to_frames(keep["end"], rate)
             if sf_end <= sf_start:
                 continue
             length = sf_end - sf_start
+            duration_seconds = rate.to_seconds(length)
             self.keeps.append(
                 {
                     "sf_start": sf_start,
@@ -97,14 +116,18 @@ class Timeline:
                     "of_start": cursor,
                     "of_end": cursor + length,
                     "frames": length,
+                    "start_s": cursor_seconds,
+                    "dur_s": duration_seconds,
                 }
             )
             cursor += length
+            cursor_seconds += duration_seconds
         self.total_frames = cursor
+        self.total_seconds = cursor_seconds
 
     def map_source(self, t: float) -> tuple[int, int] | None:
         """Source seconds -> (output frame, keep index), or None if cut."""
-        frame = to_frames(t, self.fps)
+        frame = to_frames(t, self.rate)
         for index, keep in enumerate(self.keeps):
             if keep["sf_start"] <= frame < keep["sf_end"]:
                 return keep["of_start"] + (frame - keep["sf_start"]), index
@@ -113,7 +136,7 @@ class Timeline:
     def clamp_to_keep(self, t: float, index: int) -> int:
         """Source seconds -> output frame, clamped inside the given keep."""
         keep = self.keeps[index]
-        frame = min(max(to_frames(t, self.fps), keep["sf_start"]), keep["sf_end"])
+        frame = min(max(to_frames(t, self.rate), keep["sf_start"]), keep["sf_end"])
         return keep["of_start"] + (frame - keep["sf_start"])
 
 
@@ -147,8 +170,8 @@ def build_cues(
     built from a de-timestamped "polished script" instead of from the
     transcript and the EDL together.
     """
-    fps = timeline.fps
-    gap_frames = to_frames(gap_threshold, fps)
+    rate = timeline.rate
+    gap_frames = to_frames(gap_threshold, rate)
 
     cues: list[dict] = []
     current: dict | None = None
@@ -229,12 +252,12 @@ def render_clips(timeline: Timeline, source: str) -> str:
     (packages/producer/src/services/audioExtractor.ts), and the linter
     errors on a <video> with data-start that is not muted.
     """
-    fps = timeline.fps
+    rate = timeline.rate
     lines: list[str] = []
     for index, keep in enumerate(timeline.keeps):
-        start = fmt_seconds(keep["of_start"], fps)
-        duration = fmt_seconds(keep["frames"], fps)
-        media_start = fmt_seconds(keep["sf_start"], fps)
+        start = fmt_float(keep["start_s"])
+        duration = fmt_float(keep["dur_s"])
+        media_start = fmt_seconds(keep["sf_start"], rate)
         lines.append(
             f'      <video id="clip-v-{index}" src="{html.escape(source)}" '
             f'data-start="{start}" data-duration="{duration}" '
@@ -274,7 +297,7 @@ def build_html(
     comp_id: str,
     width: int,
     height: int,
-    fps: int,
+    rate: FrameRate,
     timeline: Timeline,
     source: str,
     cues: list[dict],
@@ -288,9 +311,9 @@ def build_html(
     duration_override: float | None = None,
 ) -> str:
     total = (
-        fmt_seconds(to_frames(duration_override, fps), fps)
+        fmt_seconds(to_frames(duration_override, rate), rate)
         if duration_override is not None
-        else fmt_seconds(timeline.total_frames, fps)
+        else fmt_float(timeline.total_seconds)
     )
     scope = f'[data-composition-id="{comp_id}"]'
     is_overlay = mode == "overlay"
@@ -333,8 +356,8 @@ def build_html(
         [
             {
                 "text": cue["text"],
-                "start": round(cue["start"] / fps, 3),
-                "end": round(cue["end"] / fps, 3),
+                "start": round(rate.to_seconds(cue["start"]), 3),
+                "end": round(rate.to_seconds(cue["end"]), 3),
             }
             for cue in cues
         ],
@@ -364,8 +387,8 @@ def build_html(
         if is_overlay or softener_frames <= 0 or len(timeline.keeps) < 2
         else f"""
       // Cut softeners: a short dip at each interior cut point.
-      var DIP = {round(softener_frames / fps, 3)};
-      var CUT_POINTS = {json.dumps([round(k["of_start"] / fps, 3) for k in timeline.keeps[1:]])};
+      var DIP = {round(rate.to_seconds(softener_frames), 3)};
+      var CUT_POINTS = {json.dumps([round(k["start_s"], 3) for k in timeline.keeps[1:]])};
       CUT_POINTS.forEach(function (at, i) {{
         var dip = document.getElementById("cut-dip-" + (i + 1));
         if (!dip) return;
@@ -626,7 +649,17 @@ def main() -> int:
     parser.add_argument("--comp-id", default="talking-head")
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
-    parser.add_argument("--fps", type=int)
+    parser.add_argument(
+        "--fps",
+        help="Frame rate: 25, 29.97, 30000/1001. Defaults to the EDL's `fps`.",
+    )
+    parser.add_argument(
+        "--drop-frame",
+        dest="drop_frame",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Force drop-frame timecode on or off. Defaults per rate (on for 29.97/59.94).",
+    )
     parser.add_argument("--words-per-cue", type=int, default=5)
     parser.add_argument("--min-words", type=int, default=3)
     parser.add_argument(
@@ -680,12 +713,12 @@ def main() -> int:
         raise SystemExit("EDL has no `keeps` (or `ranges`). Nothing to build.")
     validate_keeps(keeps)
 
-    fps = args.fps or int(edl.get("fps", 30))
+    rate = parse_rate(args.fps or edl.get("fps", 30), drop=args.drop_frame)
     source = args.source or edl.get("source")
     if args.mode == "clips" and not source:
         raise SystemExit("clips mode needs a media source (--source or `source` in the EDL).")
 
-    timeline = Timeline(keeps, fps)
+    timeline = Timeline(keeps, rate)
     if timeline.total_frames <= 0:
         raise SystemExit("EDL keeps produced a zero-length timeline.")
 
@@ -707,7 +740,7 @@ def main() -> int:
             # length, so the asset drops onto the timeline at 00:00.
             callouts = []
             show_lower_third = False
-            duration_override = timeline.total_frames / fps
+            duration_override = timeline.total_seconds
         elif args.only == "lower-third":
             # Single graphics rebase to LEAD so the rendered file starts almost
             # immediately rather than carrying dead frames at the head.
@@ -715,7 +748,7 @@ def main() -> int:
             callouts = []
             lt_start, lt_dur = LEAD, 4.6
             duration_override = LEAD + lt_dur + 0.4 + TAIL
-            place_at_frames = to_frames(0.6 - LEAD, fps)
+            place_at_frames = to_frames(0.6 - LEAD, rate)
         elif args.only.startswith("callout:"):
             cues = []
             index = int(args.only.split(":", 1)[1])
@@ -727,7 +760,7 @@ def main() -> int:
             callouts = [chosen]
             show_lower_third = False
             duration_override = LEAD + float(chosen["dur"]) + 0.3 + TAIL
-            place_at_frames = to_frames(original_start - LEAD, fps)
+            place_at_frames = to_frames(original_start - LEAD, rate)
         else:
             raise SystemExit("--only takes `captions`, `lower-third`, or `callout:N`.")
 
@@ -736,14 +769,14 @@ def main() -> int:
         comp_id=args.comp_id,
         width=args.width,
         height=args.height,
-        fps=fps,
+        rate=rate,
         timeline=timeline,
         source=source or "",
         cues=cues,
         callouts=callouts,
         title=args.title,
         subtitle=args.subtitle,
-        softener_frames=to_frames(args.cut_softener, fps),
+        softener_frames=to_frames(args.cut_softener, rate),
         lt_start=lt_start,
         lt_dur=lt_dur,
         show_lower_third=show_lower_third,
@@ -756,17 +789,18 @@ def main() -> int:
     print(f"Wrote {args.out}")
     if args.only:
         print(f"  mode          {mode} (--only {args.only})")
-        print(f"  duration      {fmt_seconds(to_frames(duration_override, fps), fps)}s")
-        print(f"  place at      {fmt_seconds(place_at_frames, fps)}s on the output timeline")
+        print(f"  duration      {fmt_seconds(to_frames(duration_override, rate), rate)}s")
+        print(f"  place at      {fmt_seconds(place_at_frames, rate)}s on the output timeline")
         return 0
 
-    source_frames = to_frames(max(float(k["end"]) for k in keeps), fps)
+    source_frames = to_frames(max(float(k["end"]) for k in keeps), rate)
     removed = source_frames - timeline.total_frames
     print(f"  mode          {mode}")
+    print(f"  rate          {rate}")
     print(f"  clips         {len(timeline.keeps)}")
     print(
-        f"  duration      {fmt_seconds(timeline.total_frames, fps)}s "
-        f"({fmt_seconds(removed, fps)}s removed)"
+        f"  duration      {fmt_float(timeline.total_seconds)}s "
+        f"({fmt_seconds(removed, rate)}s removed)"
     )
     print(f"  caption cues  {len(cues)}")
     print(f"  callouts      {len(callouts)}")

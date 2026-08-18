@@ -47,7 +47,9 @@ npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 # 3. Your EDL — keeps on the SOURCE timeline. See the schema below.
 #    Callouts are authored on the OUTPUT timeline, after you can see the cut.
 
-# 4. Scaffold the package
+# 4. Scaffold the package — rate, start TC, field order and length are
+#    read off the file. Add --deinterlace if it warns that the source is
+#    interlaced; add --record-start-tc 01:00:00:00 for house convention.
 python3 export_package.py \
   --edl edl.json \
   --transcript transcript.json \
@@ -111,6 +113,14 @@ rebuilding.
 
 **Verified here, by arithmetic and parsing:**
 
+- Timecode maths self-tested at 30, 25, 29.97DF and 59.94DF, including
+  round-trips and the hour marks (107892 and 215784 frames). Run
+  `python3 mediainfo.py --selftest`.
+- A full 29.97DF interlaced export was generated against a stubbed ffprobe:
+  exact `1001/30000s` frame duration, `fieldOrder="upper first"`, `FCM: DROP
+FRAME`, source TC offset by the file's `01:00:00;00`, and all five layers
+  still landing on their intended frames.
+
 - FCPXML is well-formed 1.9; spine contiguous with no gaps or overlaps, summing
   exactly to the sequence duration.
 - All five layers resolve to their intended timeline positions; the captions
@@ -130,11 +140,12 @@ rebuilding.
 
 ## Gotchas
 
-- **Integer frame rates only.** The exporter refuses 29.97 / 23.976 rather than
-  emit a non-drop list that drifts ~3.6s per hour when conformed as drop-frame.
-  Real drop-frame support is unbuilt.
-- **Source start timecode is assumed `00:00:00:00`.** If your camera files carry
-  real start TC, every event in the EDL and FCPXML shifts by that offset.
+- **Interlaced sources need `--deinterlace`.** The render engine has no
+  deinterlacer, so fields come through combed. The flag adds a `yadif=mode=0`
+  prep pass (frame count preserved, so all timecode still holds) and cuts from
+  the progressive intermediate. You get a warning if you forget.
+- **VFR cannot be conformed.** ffprobe VFR detection warns; transcode to CFR
+  first.
 - **ProRes MOV for anything entering Resolve.** WebM carries alpha but renders
   as black in editors. WebM is only for the ffmpeg composite path.
 - **`clips` mode vs `overlay` mode.** `clips` puts the source through the frame

@@ -164,6 +164,39 @@ Captions ride the timeline as a rendered layer so the styling survives exactly.
 `captions.srt` ships alongside for when you'd rather delete that layer and use
 an editable subtitle track instead.
 
+## Format comes from the source
+
+Rate, start timecode, field order and dimensions are read off the file with
+ffprobe. Nothing is assumed:
+
+```
+Probed interview.mxf:
+  rate          30000/1001 (29.970DF)
+  scan          tt
+  size          1920x1080
+  start TC      01:00:00;00
+  WARNING       source is interlaced (tt) and --deinterlace was not passed.
+```
+
+**Fractional rates are exact everywhere.** 29.97 is carried as `30000/1001`,
+23.976 as `24000/1001`, 59.94 as `60000/1001`. FCPXML gets
+`frameDuration="1001/30000s"` and rational time values, so nothing rounds.
+Drop-frame timecode is emitted for 29.97 and 59.94 — `FCM: DROP FRAME` and `;`
+separators — and never for 23.976 or PAL, where it isn't defined. Override with
+`--fps` and `--drop-frame/--no-drop-frame`.
+
+**Start timecode is honoured.** Source in/out points are offset by the file's own
+start TC, so the list conforms against the camera original rather than a file
+that happens to begin at zero. `--record-start-tc` sets the timeline start
+(`01:00:00:00` if that's your house convention).
+
+**Source length comes from the file**, so shots keep handles past the last cut.
+Without a probe it falls back to the EDL's extent and says so.
+
+`python3 mediainfo.py --probe <file>` prints what it reads.
+`python3 mediainfo.py --selftest` checks the timecode maths — including that an
+hour of 29.97DF is 107892 frames and an hour of 59.94DF is 215784.
+
 ## Inputs
 
 | File              | Time base  | Shape                                                                                                                                                   |
@@ -254,11 +287,13 @@ fresh checkout.
   is well-formed 1.9 — but Resolve is fussy about `<format>` and asset
   declarations, and no one has confirmed it imports cleanly. Expect one round of
   fixes. `edit.edl` is the fallback: far simpler, and near-certain to conform.
-- **Integer frame rates only.** 29.97 and 23.976 need drop-frame timecode, and a
-  non-drop list conformed as drop-frame drifts ~3.6s per hour. The exporter
-  refuses non-integer fps rather than emit a list that looks right and isn't.
-- **Source start timecode is assumed `00:00:00:00`.** If your camera files carry
-  real start TC, every event in the EDL and FCPXML shifts by that offset.
+- **Interlaced sources need `--deinterlace`.** The render engine has no
+  deinterlacer and no field-order awareness at all, so fields come through
+  combed. The flag adds a `yadif=mode=0` prep pass — one frame out per frame in,
+  so the frame count and every timecode still hold — and cuts from the
+  progressive intermediate.
+- **Variable frame rate cannot be conformed.** If ffprobe reports VFR you get a
+  warning; transcode to CFR before doing anything else.
 - **Nothing here has been rendered.** `build.sh` is syntax-checked and the
   commands match the current CLI, but this container has no ffmpeg and no
   network access to the GSAP CDN, so no render or transcode has been executed.
