@@ -291,15 +291,18 @@
 
         // Callouts, authored on the output timeline.
         var stage = document.querySelector('[data-composition-id="talking-head"]');
+        // Callout geometry in the JSON is authored in 1080-space, same as the
+        // stylesheet, so it scales by the same factor.
+        var GFX_SCALE = 1.0;
         CALLOUTS.forEach(function (callout, index) {
           var el = document.createElement("div");
           el.className = "callout";
           el.id = "callout-" + index;
           el.textContent = callout.text;
-          if (callout.x !== undefined) el.style.left = callout.x + "px";
-          if (callout.y !== undefined) el.style.top = callout.y + "px";
-          if (callout.w !== undefined) el.style.maxWidth = callout.w + "px";
-          if (callout.size !== undefined) el.style.fontSize = callout.size + "px";
+          if (callout.x !== undefined) el.style.left = callout.x * GFX_SCALE + "px";
+          if (callout.y !== undefined) el.style.top = callout.y * GFX_SCALE + "px";
+          if (callout.w !== undefined) el.style.maxWidth = callout.w * GFX_SCALE + "px";
+          if (callout.size !== undefined) el.style.fontSize = callout.size * GFX_SCALE + "px";
           stage.appendChild(el);
 
           var out = callout.start + callout.dur;

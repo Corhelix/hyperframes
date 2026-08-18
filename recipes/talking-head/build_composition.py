@@ -316,6 +316,14 @@ def build_html(
         else fmt_float(timeline.total_seconds)
     )
     scope = f'[data-composition-id="{comp_id}"]'
+
+    # Type and spacing below are authored in 1080-space pixels. Matching the
+    # source frame size only helps if the graphics scale with it -- a 54px
+    # caption on a 2160-tall canvas is half the size it looks at 1080.
+    scale = height / 1080
+
+    def px(value: float) -> int:
+        return max(1, round(value * scale))
     is_overlay = mode == "overlay"
 
     media_markup = "" if is_overlay else render_clips(timeline, source)
@@ -429,8 +437,8 @@ def build_html(
         position: absolute;
         left: 0;
         right: 0;
-        bottom: 120px;
-        height: 200px;
+        bottom: {px(120)}px;
+        height: {px(200)}px;
         z-index: 20;
         pointer-events: none;
       }}
@@ -439,59 +447,59 @@ def build_html(
         left: 50%;
         bottom: 0;
         transform: translateX(-50%);
-        max-width: 1500px;
+        max-width: {px(1500)}px;
         margin: 0 auto;
-        padding: 0 40px;
+        padding: 0 {px(40)}px;
         text-align: center;
-        font-size: 54px;
+        font-size: {px(54)}px;
         font-weight: 700;
         line-height: 1.25;
         color: #fff;
-        text-shadow: 0 3px 14px rgba(0, 0, 0, 0.72);
+        text-shadow: 0 {px(3)}px {px(14)}px rgba(0, 0, 0, 0.72);
         opacity: 0;
         visibility: hidden;
       }}
       {scope} .lower-third {{
         position: absolute;
-        left: 96px;
-        bottom: 380px;
+        left: {px(96)}px;
+        bottom: {px(380)}px;
         z-index: 22;
         opacity: 0;
         visibility: hidden;
       }}
       {scope} .lower-third .lt-name {{
-        font-size: 44px;
+        font-size: {px(44)}px;
         font-weight: 700;
         color: #fff;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+        text-shadow: 0 {px(2)}px {px(10)}px rgba(0, 0, 0, 0.6);
       }}
       {scope} .lower-third .lt-role {{
-        margin-top: 8px;
-        font-size: 28px;
+        margin-top: {px(8)}px;
+        font-size: {px(28)}px;
         font-weight: 500;
         color: rgba(255, 255, 255, 0.82);
         text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
       }}
       {scope} .lower-third .lt-rule {{
-        width: 132px;
-        height: 5px;
-        margin-bottom: 18px;
-        border-radius: 3px;
+        width: {px(132)}px;
+        height: {px(5)}px;
+        margin-bottom: {px(18)}px;
+        border-radius: {px(3)}px;
         background: #4da3ff;
       }}
       {scope} .callout {{
         position: absolute;
-        left: 96px;
-        top: 140px;
-        max-width: 760px;
-        padding: 26px 32px;
-        border: 1px solid rgba(255, 255, 255, 0.28);
-        border-radius: 18px;
+        left: {px(96)}px;
+        top: {px(140)}px;
+        max-width: {px(760)}px;
+        padding: {px(26)}px {px(32)}px;
+        border: {px(1)}px solid rgba(255, 255, 255, 0.28);
+        border-radius: {px(18)}px;
         background: rgba(18, 32, 54, 0.55);
-        backdrop-filter: blur(18px);
-        -webkit-backdrop-filter: blur(18px);
-        box-shadow: 0 18px 48px rgba(0, 0, 0, 0.38);
-        font-size: 38px;
+        backdrop-filter: blur({px(18)}px);
+        -webkit-backdrop-filter: blur({px(18)}px);
+        box-shadow: 0 {px(18)}px {px(48)}px rgba(0, 0, 0, 0.38);
+        font-size: {px(38)}px;
         font-weight: 600;
         line-height: 1.3;
         color: #fff;
@@ -583,15 +591,18 @@ def build_html(
 
         // Callouts, authored on the output timeline.
         var stage = document.querySelector('[data-composition-id="{comp_id}"]');
+        // Callout geometry in the JSON is authored in 1080-space, same as the
+        // stylesheet, so it scales by the same factor.
+        var GFX_SCALE = {scale!r};
         CALLOUTS.forEach(function (callout, index) {{
           var el = document.createElement("div");
           el.className = "callout";
           el.id = "callout-" + index;
           el.textContent = callout.text;
-          if (callout.x !== undefined) el.style.left = callout.x + "px";
-          if (callout.y !== undefined) el.style.top = callout.y + "px";
-          if (callout.w !== undefined) el.style.maxWidth = callout.w + "px";
-          if (callout.size !== undefined) el.style.fontSize = callout.size + "px";
+          if (callout.x !== undefined) el.style.left = callout.x * GFX_SCALE + "px";
+          if (callout.y !== undefined) el.style.top = callout.y * GFX_SCALE + "px";
+          if (callout.w !== undefined) el.style.maxWidth = callout.w * GFX_SCALE + "px";
+          if (callout.size !== undefined) el.style.fontSize = callout.size * GFX_SCALE + "px";
           stage.appendChild(el);
 
           var out = callout.start + callout.dur;

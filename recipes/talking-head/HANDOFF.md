@@ -47,9 +47,10 @@ npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 # 3. Your EDL — keeps on the SOURCE timeline. See the schema below.
 #    Callouts are authored on the OUTPUT timeline, after you can see the cut.
 
-# 4. Scaffold the package — rate, start TC, field order and length are
-#    read off the file. Add --deinterlace if it warns that the source is
-#    interlaced; add --record-start-tc 01:00:00:00 for house convention.
+# 4. Scaffold the package. This generates EVERY composition (clips, overlay
+#    and each graphic layer) from the probed size and rate, so nothing can
+#    drift apart. Add --deinterlace if it warns the source is interlaced;
+#    add --record-start-tc 01:00:00:00 for house convention.
 python3 export_package.py \
   --edl edl.json \
   --transcript transcript.json \
@@ -146,6 +147,9 @@ FRAME`, source TC offset by the file's `01:00:00;00`, and all five layers
   the progressive intermediate. You get a warning if you forget.
 - **VFR cannot be conformed.** ffprobe VFR detection warns; transcode to CFR
   first.
+- **Frame size and rate are matched everywhere.** All compositions are generated
+  from the probed values, and graphics scale with frame height so 4K gets 4K-sized
+  type, not 1080-sized type on a 4K canvas.
 - **Render rate is capped at 24/30/60** by the engine. NTSC renders at the
   nominal integer and gets `-itsscale 1.001` applied — exact, nothing resampled.
   **PAL 25/50 is refused outright.**

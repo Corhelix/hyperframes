@@ -606,6 +606,11 @@ def main() -> int:
         action="store_true",
         help="Skip ffprobe. Then --fps and the rest must be supplied explicitly.",
     )
+    parser.add_argument(
+        "--no-regenerate-comps",
+        action="store_true",
+        help="Leave clips/ and overlay/ alone. They must already match the source format.",
+    )
     parser.add_argument("--width", type=int)
     parser.add_argument("--height", type=int)
     parser.add_argument("--words-per-cue", type=int, default=5)
@@ -721,50 +726,61 @@ def main() -> int:
     (out / "graphics" / "stills").mkdir(parents=True, exist_ok=True)
     gfx_root = HERE / "gfx"
 
-    # One standalone composition per graphic, rendered later into its own
-    # transparent asset.
-    for element in elements:
-        target = gfx_root / element["slug"] / "index.html"
+    def build_comp(target: Path, extra: list[str]) -> None:
+        """Generate one composition at the probed size and rate.
+
+        Every composition in the package is built from the same probed
+        numbers. Authoring clips/ and overlay/ by hand left them at the
+        1920x1080/30 defaults, so a 4K 29.97 source produced 4K graphics
+        assets and a 1080p30 programme -- a mismatch nothing would catch
+        until the layers failed to line up.
+        """
         cmd = [
             sys.executable,
             str(HERE / "build_composition.py"),
-            "--edl",
-            str(args.edl.resolve()),
-            "--only",
-            element["only"],
-            "--comp-id",
-            f"gfx-{element['slug']}",
-            "--width",
-            str(width),
-            "--height",
-            str(height),
-            "--fps",
-            str(render_rate.num),
-            "--title",
-            args.title,
-            "--subtitle",
-            args.subtitle,
-            "--out",
-            str(target),
+            "--edl", str(args.edl.resolve()),
+            "--width", str(width),
+            "--height", str(height),
+            "--fps", str(render_rate.num),
+            "--title", args.title,
+            "--subtitle", args.subtitle,
+            "--out", str(target),
+            *extra,
         ]
         if args.callouts:
             cmd += ["--callouts", str(args.callouts.resolve())]
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+
+    caption_flags: list[str] = []
+    if args.transcript:
+        caption_flags = [
+            "--transcript", str(args.transcript.resolve()),
+            "--words-per-cue", str(args.words_per_cue),
+            "--min-words", str(args.min_words),
+            "--gap", str(args.gap),
+        ]
+
+    if not args.no_regenerate_comps:
+        build_comp(
+            HERE / "clips" / "index.html",
+            ["--mode", "clips", "--comp-id", "talking-head", *caption_flags],
+        )
+        build_comp(
+            HERE / "overlay" / "index.html",
+            ["--mode", "overlay", "--comp-id", "talking-head-overlay", *caption_flags],
+        )
+
+    # One standalone composition per graphic, rendered later into its own
+    # transparent asset.
+    for element in elements:
+        extra = ["--only", element["only"], "--comp-id", f"gfx-{element['slug']}"]
         if element["only"] == "captions":
             # The captions layer needs the transcript and the identical cue
             # grouping, or it renders empty or out of sync with final.mp4.
             if not args.transcript:
                 raise SystemExit("A captions layer was requested but no --transcript was given.")
-            cmd += [
-                "--transcript",
-                str(args.transcript.resolve()),
-                "--words-per-cue",
-                str(args.words_per_cue),
-                "--min-words",
-                str(args.min_words),
-                "--gap",
-                str(args.gap),
-            ]
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL)
+            extra += caption_flags
+        build_comp(gfx_root / element["slug"] / "index.html", extra)
 
     if cues:
         write_srt(out / "captions.srt", cues, rate)
@@ -988,6 +1004,7 @@ def main() -> int:
     print(f"  graphics      {len(elements)} assets → {gfx_root}")
     print(f"  captions      {len(cues)} cues")
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
+    print(f"  format        {width}x{height} @ {rate}, rendering at {render_rate.num}")
     print(f"  next          {out / 'build.sh'}")
     return 0
 
