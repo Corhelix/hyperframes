@@ -7,6 +7,18 @@ consuming a hand-authored one. Detects dead air and filler words from
 word-level timestamps and emits the keeps/cuts schema the rest of the
 recipe already reads.
 
+**These thresholds are a stand-in, not the requirement.** REQUIREMENT.md
+§2 asks the system to "decide whether a pause is intentional (e.g.,
+before a key point) or just dead air", and that is a contextual
+judgement: frames at the cut point, the surrounding transcript, and audio
+features. Duration is the crudest possible proxy for intent, and a long
+pause before a punchline is the point rather than a fault.
+
+Until that pass exists this reads the speaker's own pause distribution
+and only touches obvious outliers, shortening them to a beat instead of
+removing them. It is deliberately timid because being timid is
+recoverable and cutting a punchline setup is not.
+
 Conservative by default. It is easier to tighten a cut list after
 watching it than to recover a moment that was removed, so the defaults
 leave short pauses alone and only remove fillers that are unambiguous.
@@ -133,6 +145,11 @@ def mark_fillers(words: list[dict], aggressive: bool) -> set[int]:
 
 def derive_thresholds(pacing: dict) -> tuple[float, float]:
     """Only obviously dead air is touched, and it is shortened, not removed.
+
+    A proxy for the contextual pause classification in REQUIREMENT.md §2.
+    Duration cannot tell a punchline setup from dead air; it can only tell
+    an outlier from the speaker's norm, so the bar is set high enough that
+    an outlier is very likely to be dead air.
 
     A pause of half a second is healthy. One or two seconds is still
     someone thinking, and cutting it is what makes an edit feel airless.
