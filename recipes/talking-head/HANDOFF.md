@@ -55,8 +55,14 @@ npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 #    beat rather than removed. Tune with --min-silence / --pause-target
 #    after watching a pass; --aggressive-fillers if you want it tighter.
 python3 detect_cuts.py \
-  --transcript transcript.json --out clean.edl.json \
+  --transcript transcript.json --out thresholded.edl.json \
+  --candidates candidates.json \
   --source media/source.mp4 --fps 25 --source-duration <seconds>
+
+# 3b. Judge each candidate in context. This is where the decisions are
+#     actually made, and where the reasons come from. Needs credentials;
+#     without them it passes the thresholds through, labelled unreviewed.
+python3 decide_cuts.py --candidates candidates.json --out clean.edl.json
 #    Callouts are authored on the OUTPUT timeline, after you can see the cut.
 
 # 4. Scaffold the package. This generates EVERY composition (clips, overlay

@@ -16,6 +16,7 @@ could not surface.
 from __future__ import annotations
 
 import json
+import os
 import random
 import subprocess
 import sys
@@ -140,6 +141,46 @@ def main() -> int:
           survived.count("most teams") == 1)
     retake_cuts = sum(1 for c in taken["cuts"] if c["reason"] == "retake")
     check("Retakes cost one cut each", "2", retake_cuts, retake_cuts == 2)
+
+    # The decision pass. Exercised against a stubbed SDK so it runs offline:
+    # what is proven here is that reasons survive into the EDL and that keeps
+    # are recorded, not that any particular judgement is good.
+    stub = work / "stub" / "anthropic"
+    stub.mkdir(parents=True)
+    (stub / "__init__.py").write_text(
+        "import json, types\n"
+        "class _B:\n"
+        "    def __init__(s, t): s.type, s.text = 'text', t\n"
+        "class _M:\n"
+        "    def create(s, **k):\n"
+        "        b = json.loads(k['messages'][0]['content'].split('\\n\\n', 1)[1])\n"
+        "        d = [{'id': c['id'], 'action': 'keep' if c['kind'] == 'borderline-pause' else 'cut',\n"
+        "              'start': c['start'], 'end': c['end'],\n"
+        "              'reason': 'Left it, the beat is doing work.' if c['kind'] == 'borderline-pause'\n"
+        "                        else 'Removed, a stumble with nothing after it.'} for c in b]\n"
+        "        return types.SimpleNamespace(content=[_B(json.dumps(\n"
+        "            {'decisions': d, 'notes': 'Left three ums in because they flowed.'}))])\n"
+        "class Anthropic:\n"
+        "    def __init__(s, **k): s.messages = _M()\n",
+        encoding="utf-8",
+    )
+    cand = work / "candidates.json"
+    run([sys.executable, str(HERE / "detect_cuts.py"), "--transcript", str(transcript),
+         "--out", str(work / "thresholded.json"), "--candidates", str(cand),
+         "--source-duration", str(duration)])
+    reviewed = work / "reviewed.edl.json"
+    env_prev = os.environ.get("PYTHONPATH", "")
+    os.environ["PYTHONPATH"] = str(work / "stub") + os.pathsep + env_prev
+    run([sys.executable, str(HERE / "decide_cuts.py"), "--candidates", str(cand),
+         "--out", str(reviewed)])
+    os.environ["PYTHONPATH"] = env_prev
+    judged = json.loads(reviewed.read_text())
+    prose = [c for c in judged["cuts"] if len(c.get("reason", "").split()) >= 4]
+    check("Cuts carry a written reason", "all", f'{len(prose)}/{len(judged["cuts"])}',
+          len(prose) == len(judged["cuts"]) and judged["cuts"])
+    check("What was left in is recorded", "> 0", len(judged["kept"]), len(judged["kept"]) > 0)
+    check("Review is attributed", "model named", judged["review"]["reviewedBy"],
+          judged["review"]["reviewedBy"] != "thresholds only")
 
     out = work / "out"
     run([sys.executable, str(HERE / "export_package.py"), "--edl", str(edl),

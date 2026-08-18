@@ -439,10 +439,85 @@ def assert_no_mid_word_cuts(keeps: list[dict], words: list[dict], fillers: set[i
         )
 
 
+def context_around(words: list[dict], start: float, end: float, window: float = 5.0) -> dict:
+    """The transcript either side of a candidate.
+
+    REQUIREMENT.md §2 pairs every frame grab with the surrounding transcript,
+    plus or minus about five seconds. Intent lives in that context: the same
+    two-second gap is dead air after a throwaway line and a deliberate beat
+    before a reveal, and nothing in the gap itself tells you which.
+    """
+    return {
+        "before": " ".join(
+            w["text"] for w in words if start - window <= w["end"] <= start + 1e-6
+        ),
+        "after": " ".join(
+            w["text"] for w in words if end - 1e-6 <= w["start"] <= end + window
+        ),
+    }
+
+
+def build_candidates(
+    words: list[dict],
+    removals: list[dict],
+    fillers: set[int],
+    min_silence: float,
+    extent: float,
+) -> list[dict]:
+    """Everything worth a decision, including what the rules would leave alone.
+
+    Borderline pauses are included deliberately. A threshold can only say
+    "over" or "under"; a reader of the transcript can say "that one is the
+    setup for the next line, leave it". Offering only the proposed cuts
+    would hide exactly the calls worth making.
+    """
+    candidates: list[dict] = []
+    for removal in removals:
+        candidates.append(
+            {
+                "kind": removal["reason"],
+                "start": round(removal["start"], 3),
+                "end": round(removal["end"], 3),
+                "proposal": "cut",
+                **context_around(words, removal["start"], removal["end"]),
+            }
+        )
+    covered = [(r["start"], r["end"]) for r in removals]
+    for current, following in zip(words, words[1:]):
+        gap = following["start"] - current["end"]
+        if not (min_silence * 0.4 <= gap < min_silence):
+            continue
+        if any(s <= current["end"] and e >= following["start"] for s, e in covered):
+            continue
+        candidates.append(
+            {
+                "kind": "borderline-pause",
+                "start": round(current["end"], 3),
+                "end": round(following["start"], 3),
+                "proposal": "keep",
+                **context_around(words, current["end"], following["start"]),
+            }
+        )
+    candidates.sort(key=lambda c: c["start"])
+    for index, candidate in enumerate(candidates, start=1):
+        candidate["id"] = index
+        candidate["duration"] = round(candidate["end"] - candidate["start"], 3)
+    return candidates
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Detect cuts from a word-level transcript.")
     parser.add_argument("--transcript", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument(
+        "--candidates",
+        type=Path,
+        help=(
+            "Also write the candidates, each with the transcript either side, for "
+            "decide_cuts.py to judge in context. Without this the thresholds decide "
+            "alone, which they are not really qualified to do."
+        ),
+    )
     parser.add_argument("--source", help="Media path recorded in the EDL for downstream steps.")
     parser.add_argument("--fps", default="25", help="Recorded in the EDL. Detection is rate-free.")
     parser.add_argument(
@@ -565,6 +640,26 @@ def main() -> int:
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(edl, indent=2) + "\n", encoding="utf-8")
+
+    if args.candidates:
+        candidates = build_candidates(words, removals, fillers, min_silence, extent)
+        args.candidates.parent.mkdir(parents=True, exist_ok=True)
+        args.candidates.write_text(
+            json.dumps(
+                {
+                    "source": edl["source"],
+                    "fps": edl["fps"],
+                    "sourceDuration": round(extent, 3),
+                    "pacing": pacing,
+                    "thresholds": {"minSilence": min_silence, "pauseTarget": pause_target},
+                    "candidates": candidates,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        print(f"  candidates    {len(candidates)} written to {args.candidates}")
 
     print(f"Wrote {args.out}")
     print(f"  source        {extent:.1f}s, {len(words)} words")
