@@ -242,6 +242,7 @@ def write_fcpxml(
     project_name: str,
     v1: str = "source",
     rough_cut: Path | None = None,
+    render_rate: FrameRate | None = None,
 ) -> None:
     """Write a complete program: the cut plus every graphic layer, in place.
 
@@ -318,6 +319,25 @@ def write_fcpxml(
             src=(rough_cut or Path("rough_cut.mp4")).resolve().as_uri(),
         )
 
+    # Graphics are rendered at whatever rate suits and are always progressive.
+    # Declaring them as the timeline's format would misstate both, so they get
+    # their own. Their placement is unaffected -- an NLE conforms on import.
+    gfx_format = "r0"
+    if render_rate is not None and (
+        render_rate.num != rate.num or render_rate.den != rate.den or scan == "i"
+    ):
+        gfx_format = "rG"
+        ET.SubElement(
+            resources,
+            "format",
+            id=gfx_format,
+            name=f"FFVideoFormat{height}p{render_rate.num}",
+            frameDuration=f"{render_rate.den}/{render_rate.num}s",
+            width=str(width),
+            height=str(height),
+            colorSpace="1-1-1 (Rec. 709)",
+        )
+
     for index, element in enumerate(elements):
         element["ref"] = f"r{index + 2}"
         asset = ET.SubElement(
@@ -328,7 +348,7 @@ def write_fcpxml(
             start="0s",
             duration=rational(element["duration_frames"], rate),
             hasVideo="1",
-            format="r0",
+            format=gfx_format,
         )
         ET.SubElement(
             asset,
@@ -413,7 +433,7 @@ def write_fcpxml(
             offset=rational(local_start + (place - record_in), rate),
             start="0s",
             duration=rational(element["duration_frames"], rate),
-            format="r0",
+            format=gfx_format,
         )
 
     ET.indent(fcpxml, space="  ")
@@ -440,6 +460,7 @@ def write_build_script(
     out_dir: Path,
     deinterlace: bool = False,
     render_rate: FrameRate | None = None,
+    field_order: str = "progressive",
 ) -> None:
     # One decode, N trim filters, one concat -- not N re-opens of the same
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
@@ -475,40 +496,34 @@ def write_build_script(
             'SRC="$OUT/source_progressive.mov"',
             "",
         ]
+    # x264 encodes progressive unless told otherwise, which would quietly
+    # flatten an interlaced source into combed progressive frames. Keep the
+    # field order the source had.
+    ilace = ""
+    if field_order in ("tt", "tb"):
+        ilace = " -flags +ilme+ildct -top 1"
+    elif field_order in ("bb", "bt"):
+        ilace = " -flags +ilme+ildct -top 0"
+
     lines += [
         "# 1. Rough cut -- the cut only, no graphics. Single decode.",
+        f"#    Field order preserved: {field_order}." if ilace else "",
         'ffmpeg -y -i "$SRC" -filter_complex "' + filtergraph + '" \\',
-        '  -map "[outv]" -map "[outa]" -c:v libx264 -crf 18 -preset medium \\',
+        f'  -map "[outv]" -map "[outa]" -c:v libx264 -crf 18 -preset medium{ilace} \\',
         '  -c:a aac -b:a 192k "$OUT/rough_cut.mp4"',
         "",
     ]
 
-    # Graphics render at a rate the engine accepts, then ffmpeg conforms them
-    # to the timeline rate. One rule, no per-rate-family branching: the source
-    # never enters HyperFrames, so its rate is never constrained by what the
-    # renderer will emit.
+    # Graphics carry no timing obligation. They are not locked to audio, and
+    # the overlay filter samples them in the output timebase, so whatever rate
+    # they were rendered at simply does not matter. No conform pass.
     nominal = render_rate.num
-    if render_rate.num == rate.num and render_rate.den == rate.den:
-        lines += ["conform() { :; }  # graphics already at the timeline rate", ""]
-    else:
-        lines += [
-            f"# Graphics render at {nominal} (the engine takes 24/30/60) and are",
-            f"# conformed to {rate.num}/{rate.den} here. Durations in seconds are",
-            "# preserved; only the frame grid changes.",
-            "conform() {  # conform <file>",
-            f'  ffmpeg -y -i "$1" -vf fps={rate.num}/{rate.den} '
-            '-c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le "${1%.mov}.conformed.mov"',
-            '  mv "${1%.mov}.conformed.mov" "$1"',
-            "}",
-            "",
-        ]
 
     lines += [
         "# 2. Flattened graphics overlay, full length, alpha.",
         "#    ProRes 4444, not WebM: WebM alpha shows as black in Resolve.",
         f'npx hyperframes render "$RECIPE/overlay" --fps {nominal} --format mov '
         '-o "$OUT/graphics/overlay.mov"',
-        'conform "$OUT/graphics/overlay.mov"',
         "",
         "# 3. Every layer as its own transparent asset. These are what the",
         "#    FCPXML timeline references -- render them before importing it.",
@@ -519,7 +534,6 @@ def write_build_script(
             f'npx hyperframes render "$RECIPE/gfx/{slug}" --fps {nominal} --format mov '
             f'-o "$OUT/graphics/{slug}.mov"'
         )
-        lines.append(f'conform "$OUT/graphics/{slug}.mov"')
     lines += ["", "# 4. Flat PNG stills, for when a still is easier to place than a clip."]
     for element in elements:
         slug = element["slug"]
@@ -588,9 +602,9 @@ def main() -> int:
         "--deinterlace",
         action="store_true",
         help=(
-            "Add a yadif prep pass to build.sh and cut from the progressive "
-            "intermediate. Required for interlaced sources -- the render engine "
-            "has no deinterlacer, so fields would come through combed."
+            "Deinterlace to progressive before cutting. Off by default: the "
+            "footage never goes through a renderer, so its field order is "
+            "preserved as-is."
         ),
     )
     parser.add_argument(
@@ -646,16 +660,12 @@ def main() -> int:
     else:
         rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
 
-    # HyperFrames renders cards and titles. It never sees the footage, so what
-    # it will emit constrains nothing about the source: any rate goes through.
-    # Graphics render at the nearest rate the engine accepts and ffmpeg conforms
-    # them to the timeline afterwards.
+    # HyperFrames renders cards and titles; it never sees the footage. Graphics
+    # are rendered at the timeline rate when the engine takes it, and at 30
+    # otherwise -- nothing depends on the choice, since graphics carry no sync
+    # obligation and the overlay filter samples them in the output timebase.
     render_rate = (
-        rate
-        if rate.is_exact_integer and rate.num in SUPPORTED_RENDER_FPS
-        else FrameRate(
-            min((f for f in SUPPORTED_RENDER_FPS if f >= rate.nominal), default=60), 1
-        )
+        rate if rate.is_exact_integer and rate.num in SUPPORTED_RENDER_FPS else FrameRate(30, 1)
     )
 
     width = args.width or (info.width if info else 1920) or 1920
@@ -682,13 +692,10 @@ def main() -> int:
                 "  WARNING       variable frame rate detected. A VFR source cannot "
                 "be conformed frame-accurately -- transcode to CFR first."
             )
-    if interlaced and not args.deinterlace:
+    if interlaced:
         print(
-            f"  WARNING       source is interlaced ({field_order}) and --deinterlace "
-            "was not passed.\n"
-            "                The render engine has no deinterlacer, so graphics "
-            "renders will comb.\n"
-            "                Re-run with --deinterlace to add a yadif prep pass."
+            f"  note          interlaced ({field_order}); kept as-is through the cut. "
+            "Pass --deinterlace only if you want progressive output."
         )
 
     words: list[dict] = []
@@ -816,6 +823,7 @@ def main() -> int:
         source_start_frames=source_start_frames,
         field_order=field_order,
         record_start_frames=record_start_frames,
+        render_rate=render_rate,
     )
 
     manifest = {
@@ -984,6 +992,7 @@ def main() -> int:
         out_dir=out,
         deinterlace=args.deinterlace,
         render_rate=render_rate,
+        field_order="progressive" if args.deinterlace else field_order,
     )
 
     print(f"Package scaffolded in {out}")
@@ -992,7 +1001,7 @@ def main() -> int:
     print(f"  captions      {len(cues)} cues")
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
     print(f"  format        {width}x{height} @ {rate}")
-    print(f"  graphics      rendered at {render_rate.num}, conformed to {rate} by ffmpeg")
+    print(f"  graphics      rendered at {render_rate.num} (no sync obligation)")
     print(f"  next          {out / 'build.sh'}")
     return 0
 

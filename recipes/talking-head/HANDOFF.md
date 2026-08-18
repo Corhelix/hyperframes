@@ -141,10 +141,8 @@ FRAME`, source TC offset by the file's `01:00:00;00`, and all five layers
 
 ## Gotchas
 
-- **Interlaced sources need `--deinterlace`.** The render engine has no
-  deinterlacer, so fields come through combed. The flag adds a `yadif=mode=0`
-  prep pass (frame count preserved, so all timecode still holds) and cuts from
-  the progressive intermediate. You get a warning if you forget.
+- **Interlaced stays interlaced.** The rough cut is encoded with the source's
+  field order (`+ilme+ildct`, correct `-top`). `--deinterlace` is opt-in.
 - **VFR cannot be conformed.** ffprobe VFR detection warns; transcode to CFR
   first.
 - **Frame size and rate are matched everywhere.** All compositions are generated
