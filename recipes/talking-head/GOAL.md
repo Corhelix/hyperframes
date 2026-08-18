@@ -62,8 +62,8 @@ it in the timeline.
 _Success looks like:_ running it twice on the same source produces a better cut
 the second time, and you can see which cuts moved and why.
 
-Sprints 1 to 3 are the polish step and are what the system is missing. 4 and 5
-are the context-aware layer and are deferred until 1 to 3 are proven on real
+Sprint 1 is built and unwatched. Sprints 2 and 3 complete the polish step. 4 and
+5 are the context-aware layer and are deferred until 1 to 3 are proven on real
 footage.
 
 ---

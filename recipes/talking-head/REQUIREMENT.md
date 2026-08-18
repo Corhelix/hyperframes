@@ -46,13 +46,14 @@ actually wanted, and is not the point of the system.
 
 ## Built / not built
 
-| Step                                                 | State                              |
-| ---------------------------------------------------- | ---------------------------------- |
-| 1. Audio pass: transcription                         | Built, `hyperframes transcribe`    |
-| 1. Audio pass: silence / filler / bad-take detection | **Not built.** The EDL is an input |
-| 1. `polished_script.txt`                             | **Not built**                      |
-| 2. Frame/context pass and cut scoring                | **Not built**                      |
-| 3. Slices and reconnection                           | Built                              |
-| 4. Composition: captions, lower-third, callouts      | Built                              |
-| 5. Preview and render                                | Built                              |
-| Context-aware loop                                   | **Not built**                      |
+| Step                                            | State                           |
+| ----------------------------------------------- | ------------------------------- |
+| 1. Audio pass: transcription                    | Built, `hyperframes transcribe` |
+| 1. Audio pass: silence and filler detection     | Built, `detect_cuts.py`         |
+| 1. Audio pass: bad-take detection               | **Not built.** Sprint 3         |
+| 1. `polished_script.txt`                        | **Not built**                   |
+| 2. Frame/context pass and cut scoring           | **Not built**                   |
+| 3. Slices and reconnection                      | Built                           |
+| 4. Composition: captions, lower-third, callouts | Built                           |
+| 5. Preview and render                           | Built                           |
+| Context-aware loop                              | **Not built**                   |

@@ -44,7 +44,11 @@ cp /path/to/interview.mp4 clips/media/source.mp4
 # 2. Transcript (word-level timestamps)
 npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 
-# 3. Your EDL — keeps on the SOURCE timeline. See the schema below.
+# 3. Detect the cuts. Conservative by default: clear fillers and pauses
+#    over 0.6s. Add --aggressive-fillers for a tighter pass.
+python3 detect_cuts.py \
+  --transcript transcript.json --out clean.edl.json \
+  --source media/source.mp4 --fps 25 --source-duration <seconds>
 #    Callouts are authored on the OUTPUT timeline, after you can see the cut.
 
 # 4. Scaffold the package. This generates EVERY composition (clips, overlay
@@ -52,7 +56,7 @@ npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 #    drift apart. Add --deinterlace if it warns the source is interlaced;
 #    add --record-start-tc 01:00:00:00 for house convention.
 python3 export_package.py \
-  --edl edl.json \
+  --edl clean.edl.json \
   --transcript transcript.json \
   --callouts callouts.json \
   --source-file "$PWD/clips/media/source.mp4" \
