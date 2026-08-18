@@ -66,6 +66,10 @@ from mediainfo import (
 
 HERE = Path(__file__).resolve().parent
 
+# What `hyperframes render` accepts (packages/cli/src/commands/render.ts). This
+# only ever limits the GRAPHICS render -- the footage never goes through it.
+SUPPORTED_RENDER_FPS = {24, 30, 60}
+
 
 # ---------------------------------------------------------------------------
 # Timecode
@@ -436,7 +440,6 @@ def write_build_script(
     out_dir: Path,
     deinterlace: bool = False,
     render_rate: FrameRate | None = None,
-    ntsc: bool = False,
 ) -> None:
     # One decode, N trim filters, one concat -- not N re-opens of the same
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
@@ -480,45 +483,34 @@ def write_build_script(
         "",
     ]
 
+    # Graphics render at a rate the engine accepts, then ffmpeg conforms them
+    # to the timeline rate. One rule, no per-rate-family branching: the source
+    # never enters HyperFrames, so its rate is never constrained by what the
+    # renderer will emit.
     nominal = render_rate.num
-    if ntsc:
+    if render_rate.num == rate.num and render_rate.den == rate.den:
+        lines += ["conform() { :; }  # graphics already at the timeline rate", ""]
+    else:
         lines += [
-            "# NTSC rates cannot be rendered directly -- the engine takes 24/30/60",
-            f"# only. Graphics render at {nominal} and the timebase is re-stamped to",
-            f"# {rate.num}/{rate.den} with -itsscale 1.001. Frame COUNT is preserved and",
-            "# no pixels are resampled, so the assets stay frame-accurate.",
+            f"# Graphics render at {nominal} (the engine takes 24/30/60) and are",
+            f"# conformed to {rate.num}/{rate.den} here. Durations in seconds are",
+            "# preserved; only the frame grid changes.",
             "conform() {  # conform <file>",
-            '  ffmpeg -y -itsscale 1.001 -i "$1" -c copy "${1%.mov}.ntsc.mov"',
-            '  mv "${1%.mov}.ntsc.mov" "$1"',
+            f'  ffmpeg -y -i "$1" -vf fps={rate.num}/{rate.den} '
+            '-c:v prores_ks -profile:v 4 -pix_fmt yuva444p10le "${1%.mov}.conformed.mov"',
+            '  mv "${1%.mov}.conformed.mov" "$1"',
             "}",
-            "",
-        ]
-    else:
-        lines += ["conform() { :; }  # integer rate, nothing to re-stamp", ""]
-
-    if ntsc:
-        lines += [
-            "# 2. Full video is built last for NTSC -- see step 6. The footage must",
-            "#    stay at its native rate, so it is composited with the overlay",
-            "#    rather than re-rendered through the frame extractor.",
-            "",
-        ]
-    else:
-        lines += [
-            "# 2. Full video -- cut plus graphics, baked.",
-            "#    clips/media/source.mp4 must exist for this to render.",
-            f'npx hyperframes render "$RECIPE/clips" --fps {nominal} -o "$OUT/final.mp4"',
             "",
         ]
 
     lines += [
-        "# 3. Flattened graphics overlay, full length, alpha.",
+        "# 2. Flattened graphics overlay, full length, alpha.",
         "#    ProRes 4444, not WebM: WebM alpha shows as black in Resolve.",
         f'npx hyperframes render "$RECIPE/overlay" --fps {nominal} --format mov '
         '-o "$OUT/graphics/overlay.mov"',
         'conform "$OUT/graphics/overlay.mov"',
         "",
-        "# 4. Every layer as its own transparent asset. These are what the",
+        "# 3. Every layer as its own transparent asset. These are what the",
         "#    FCPXML timeline references -- render them before importing it.",
     ]
     for element in elements:
@@ -528,7 +520,7 @@ def write_build_script(
             f'-o "$OUT/graphics/{slug}.mov"'
         )
         lines.append(f'conform "$OUT/graphics/{slug}.mov"')
-    lines += ["", "# 5. Flat PNG stills, for when a still is easier to place than a clip."]
+    lines += ["", "# 4. Flat PNG stills, for when a still is easier to place than a clip."]
     for element in elements:
         slug = element["slug"]
         at = rate.to_seconds(element["settled_frames"])
@@ -536,15 +528,15 @@ def write_build_script(
             f'ffmpeg -y -ss {at:.3f} -i "$OUT/graphics/{slug}.mov" -frames:v 1 '
             f'"$OUT/graphics/stills/{slug}.png"'
         )
-    if ntsc:
-        lines += [
-            "",
-            "# 6. Full video: rough cut plus the conformed graphics overlay. Keeps",
-            "#    the footage at its native rate and never resamples it.",
-            'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
-            '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
-            '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
-        ]
+    lines += [
+        "",
+        "# 5. Full video: the rough cut with the graphics overlaid. The footage",
+        "#    stays at its native rate throughout -- it is never re-rendered",
+        "#    through the frame extractor, so no rate is ever unreachable.",
+        'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
+        '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
+        '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
+    ]
     lines += ["", 'echo "Package built in $OUT"', ""]
 
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -654,20 +646,17 @@ def main() -> int:
     else:
         rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
 
-    # The render engine only accepts 24, 30 or 60 (renderOrchestrator.ts types
-    # it as `fps: 24 | 30 | 60`). NTSC rates are handled by rendering at the
-    # nominal integer and re-stamping the timebase afterwards, which is exact
-    # and resamples nothing. PAL has no such trick -- 25 and 50 simply cannot
-    # be rendered.
-    render_rate = FrameRate(rate.nominal, 1)
-    if rate.nominal not in (24, 30, 60):
-        raise SystemExit(
-            f"Frame rate {rate} cannot be rendered. `hyperframes render` accepts "
-            "only 24, 30 or 60. There is no PAL path here yet: retiming 25 to 30 "
-            "is a 1.2x change with no clean pulldown, which is not an acceptable "
-            "answer, so this refuses rather than offer one."
+    # HyperFrames renders cards and titles. It never sees the footage, so what
+    # it will emit constrains nothing about the source: any rate goes through.
+    # Graphics render at the nearest rate the engine accepts and ffmpeg conforms
+    # them to the timeline afterwards.
+    render_rate = (
+        rate
+        if rate.is_exact_integer and rate.num in SUPPORTED_RENDER_FPS
+        else FrameRate(
+            min((f for f in SUPPORTED_RENDER_FPS if f >= rate.nominal), default=60), 1
         )
-    ntsc = rate.den == 1001
+    )
 
     width = args.width or (info.width if info else 1920) or 1920
     height = args.height or (info.height if info else 1080) or 1080
@@ -719,7 +708,6 @@ def main() -> int:
         lt_start=0.6,
         lt_dur=4.6,
         caption_frames=timeline.total_frames if cues else 0,
-        render_rate=render_rate,
     )
 
     out = args.out.resolve()
@@ -996,7 +984,6 @@ def main() -> int:
         out_dir=out,
         deinterlace=args.deinterlace,
         render_rate=render_rate,
-        ntsc=ntsc,
     )
 
     print(f"Package scaffolded in {out}")
@@ -1004,7 +991,8 @@ def main() -> int:
     print(f"  graphics      {len(elements)} assets → {gfx_root}")
     print(f"  captions      {len(cues)} cues")
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
-    print(f"  format        {width}x{height} @ {rate}, rendering at {render_rate.num}")
+    print(f"  format        {width}x{height} @ {rate}")
+    print(f"  graphics      rendered at {render_rate.num}, conformed to {rate} by ffmpeg")
     print(f"  next          {out / 'build.sh'}")
     return 0
 
