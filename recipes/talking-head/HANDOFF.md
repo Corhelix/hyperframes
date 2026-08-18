@@ -44,8 +44,10 @@ cp /path/to/interview.mp4 clips/media/source.mp4
 # 2. Transcript (word-level timestamps)
 npx hyperframes transcribe clips/media/source.mp4 -d . --model small.en
 
-# 3. Detect the cuts. Conservative by default: clear fillers and pauses
-#    over 0.6s. Add --aggressive-fillers for a tighter pass.
+# 3. Detect the cuts. Thresholds derive from your own pacing; only
+#    obviously dead air is touched, and it is shortened to a natural
+#    beat rather than removed. Tune with --min-silence / --pause-target
+#    after watching a pass; --aggressive-fillers if you want it tighter.
 python3 detect_cuts.py \
   --transcript transcript.json --out clean.edl.json \
   --source media/source.mp4 --fps 25 --source-duration <seconds>
