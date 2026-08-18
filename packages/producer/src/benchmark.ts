@@ -37,7 +37,7 @@ const perfDir = resolve(testsDir, "perf");
 interface TestMeta {
   name: string;
   tags?: string[];
-  renderConfig: { fps: 24 | 30 | 60 };
+  renderConfig: { fps: 24 | 25 | 30 | 50 | 60 };
 }
 
 interface BenchmarkRun {

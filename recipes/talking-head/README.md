@@ -202,13 +202,16 @@ Callout `x/y/w/size` in the JSON are in 1080-space for the same reason.
 `--no-regenerate-comps` leaves `clips/` and `overlay/` alone if you have hand-edited
 them.
 
-**Render rate is capped at 24/30/60.** `renderOrchestrator.ts` types it as
-`fps: 24 | 30 | 60`, so NTSC rates render at their nominal integer and the
-timebase is re-stamped with `-itsscale 1.001` afterwards — exact, frame count
+**Render rates are 24, 25, 30, 50 and 60.** PAL renders natively — 25p in, 25p
+out, no retime anywhere. NTSC rates render at their nominal integer and the
+timebase is re-stamped with `-itsscale 1.001` afterwards: exact, frame count
 preserved, nothing resampled. At an NTSC rate `final.mp4` is composited from the
 rough cut plus the overlay rather than re-rendered through the frame extractor,
-so the footage never leaves its native rate. **PAL 25 and 50 cannot be rendered
-at all** and the exporter refuses rather than pretend.
+so the footage never leaves its native rate either.
+
+Retiming a source to reach a "clean" rate is never offered. 25 → 30 is a 1.2×
+ratio with no clean pulldown, so it costs either duplicated frames or a 20%
+speed change that drags audio pitch, every title and the whole ledger with it.
 
 `python3 mediainfo.py --probe <file>` prints what it reads.
 `python3 mediainfo.py --selftest` checks the timecode maths — including that an

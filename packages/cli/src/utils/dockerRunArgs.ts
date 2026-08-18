@@ -19,7 +19,7 @@ export interface DockerRunArgsInput {
 }
 
 export interface DockerRenderOptions {
-  fps: 24 | 30 | 60;
+  fps: 24 | 25 | 30 | 50 | 60;
   quality: "draft" | "standard" | "high";
   format: "mp4" | "webm" | "mov";
   workers: number;

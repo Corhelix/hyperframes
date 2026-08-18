@@ -68,7 +68,7 @@ export interface ServerOptions extends HandlerOptions {
 interface RenderInput {
   projectDir: string;
   outputPath?: string | null;
-  fps: 24 | 30 | 60;
+  fps: 24 | 25 | 30 | 50 | 60;
   quality: "draft" | "standard" | "high";
   format?: "mp4" | "webm" | "mov";
   workers?: number;
@@ -83,7 +83,7 @@ interface PreparedRenderInput {
 }
 
 function parseRenderOptions(body: Record<string, unknown>): Omit<RenderInput, "projectDir"> {
-  const fps = ([24, 30, 60].includes(body.fps as number) ? body.fps : 30) as 24 | 30 | 60;
+  const fps = ([24, 30, 60].includes(body.fps as number) ? body.fps : 30) as 24 | 25 | 30 | 50 | 60;
   const quality = (
     ["draft", "standard", "high"].includes(body.quality as string) ? body.quality : "high"
   ) as "draft" | "standard" | "high";

@@ -173,7 +173,7 @@ function createViteAdapter(dataDir: string, server: ViteDevServer): StudioApiAda
             /* @vite-ignore */ producerPkg
           );
           const job = createRenderJob({
-            fps: opts.fps as 24 | 30 | 60,
+            fps: opts.fps as 24 | 25 | 30 | 50 | 60,
             quality: opts.quality as "draft" | "standard" | "high",
             format: opts.format,
           });

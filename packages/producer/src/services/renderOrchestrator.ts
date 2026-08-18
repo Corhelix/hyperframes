@@ -173,7 +173,7 @@ export type RenderStatus =
   | "cancelled";
 
 export interface RenderConfig {
-  fps: 24 | 30 | 60;
+  fps: 24 | 25 | 30 | 50 | 60;
   quality: "draft" | "standard" | "high";
   /** Output container format. WebM uses VP9+alpha, MOV uses ProRes 4444+alpha for transparency. */
   format?: "mp4" | "webm" | "mov";
