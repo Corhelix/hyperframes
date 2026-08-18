@@ -544,27 +544,47 @@ def write_build_script(
             f'"$OUT/graphics/stills/{slug}.png"'
         )
     if final == "hyperframes":
+        resamples = not (rate.is_exact_integer and rate.num == nominal)
+        lines += ["", "# 5. Full video, rendered by HyperFrames from the clips composition,"]
+        if resamples:
+            lines += [
+                f"#    which holds the footage as well as the graphics. The source is",
+                f"#    {rate} and this renders at {nominal}, so THE FOOTAGE IS RESAMPLED.",
+                "#    Use --final ffmpeg if you want it left alone.",
+            ]
         lines += [
-            "",
-            "# 5. Full video, rendered by HyperFrames: the clips composition holds",
-            f"#    the footage as well as the graphics, so it renders at {nominal}."
-            + (
-                f" The source is {rate}, so the footage is resampled here."
-                if not (rate.is_exact_integer and rate.num == nominal)
-                else ""
-            ),
-            '#    clips/media/source.mp4 must exist.',
+            "#    clips/media/source.mp4 must exist.",
             f'npx hyperframes render "$RECIPE/clips" --fps {nominal} -o "$OUT/final.mp4"',
         ]
     else:
+        # Each graphic is overlaid as its own clip at its own moment, rather
+        # than flattening everything into one full-length stream first. A clip
+        # only exists while it is on screen, so any rate difference between the
+        # graphics and the timeline stays inside that clip's own motion instead
+        # of being smeared across the programme. The footage is never touched.
+        parts, prev = [], "[0:v]"
+        inputs = []
+        for index, element in enumerate(elements, start=1):
+            at = rate.to_seconds(element["place_frames"])
+            inputs.append(f'-i "$OUT/graphics/{element["slug"]}.mov"')
+            label = f"[g{index}]"
+            out = f"[o{index}]" if index < len(elements) else "[v]"
+            parts.append(f"[{index}:v]setpts=PTS+{at:.6f}/TB{label}")
+            parts.append(
+                f"{prev}{label}overlay=format=auto:eof_action=pass:repeatlast=0{out}"
+            )
+            prev = out
         lines += [
             "",
-            "# 5. Full video: the rough cut with the graphics overlaid. The footage",
-            "#    keeps whatever rate and field order it arrived with -- nothing",
-            "#    re-renders it, so no source format is out of reach.",
-            'ffmpeg -y -i "$OUT/rough_cut.mp4" -i "$OUT/graphics/overlay.mov" \\',
-            '  -filter_complex "[0:v][1:v]overlay=format=auto" \\',
-            '  -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
+            "# 5. Full video: each graphic overlaid as its own clip, at its own",
+            "#    time, over the untouched rough cut. Nothing re-renders the",
+            "#    footage, so its rate and field order are whatever they were.",
+            'ffmpeg -y -i "$OUT/rough_cut.mp4" \\',
+        ]
+        lines += [f"  {inp} \\" for inp in inputs]
+        lines += [
+            '  -filter_complex "' + ";".join(parts) + '" \\',
+            '  -map "[v]" -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
         ]
     lines += ["", 'echo "Package built in $OUT"', ""]
 
@@ -1032,6 +1052,14 @@ def main() -> int:
     print(f"  format        {width}x{height} @ {rate}")
     print(f"  graphics      rendered at {render_rate.num} (no sync obligation)")
     print(f"  final.mp4     assembled by {args.final}")
+    if args.final == "hyperframes" and not (
+        rate.is_exact_integer and rate.num == render_rate.num
+    ):
+        print(
+            f"  WARNING       --final hyperframes renders at {render_rate.num}, but the "
+            f"source is {rate}.\n"
+            "                The footage will be resampled. --final ffmpeg leaves it alone."
+        )
     print(f"  next          {out / 'build.sh'}")
     return 0
 
