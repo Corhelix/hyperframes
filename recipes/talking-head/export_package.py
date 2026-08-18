@@ -663,9 +663,9 @@ def main() -> int:
     if rate.nominal not in (24, 30, 60):
         raise SystemExit(
             f"Frame rate {rate} cannot be rendered. `hyperframes render` accepts "
-            "only 24, 30 or 60, so 25 and 50 are out. Options: conform the source "
-            "to a supported rate first, or use --no-probe --fps 30 and retime the "
-            "graphics in your NLE."
+            "only 24, 30 or 60. There is no PAL path here yet: retiming 25 to 30 "
+            "is a 1.2x change with no clean pulldown, which is not an acceptable "
+            "answer, so this refuses rather than offer one."
         )
     ntsc = rate.den == 1001
 

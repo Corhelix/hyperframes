@@ -84,13 +84,15 @@ def parse_rate(text: str, drop: bool | None = None) -> FrameRate:
     value = float(text)
     if abs(value - round(value)) < 1e-9:
         return FrameRate(int(round(value)), 1, drop)
-    # An unrecognised decimal: assume it is an NTSC-style rate and recover the
-    # exact rational rather than carrying the rounding forward.
-    nominal = int(round(value))
-    candidate = FrameRate(nominal * 1000, 1001, drop)
-    if abs(candidate.num / candidate.den - value) < 0.01:
-        return candidate
-    raise SystemExit(f"Unrecognised frame rate: {text!r}. Use e.g. 25, 29.97 or 30000/1001.")
+    # Anything else is refused rather than guessed. This previously assumed an
+    # unrecognised decimal was NTSC and silently returned nominal*1000/1001,
+    # so "48.5" became 48500/1001 with no warning. Guessing a rate family from
+    # a number is not something this should do.
+    raise SystemExit(
+        f"Unrecognised frame rate: {text!r}. Give an exact rational such as "
+        "30000/1001, an integer such as 25, or one of "
+        f"{', '.join(sorted(NTSC_ALIASES))}."
+    )
 
 
 # ---------------------------------------------------------------------------
