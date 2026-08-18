@@ -240,9 +240,10 @@ def write_fcpxml(
     elements: list[dict],
     graphics_dir: Path,
     project_name: str,
-    v1: str = "source",
+    v1: str = "slices",
     rough_cut: Path | None = None,
     render_rate: FrameRate | None = None,
+    slices_dir: Path | None = None,
 ) -> None:
     """Write a complete program: the cut plus every graphic layer, in place.
 
@@ -252,11 +253,13 @@ def write_fcpxml(
     pixel-identical to the baked render by construction rather than by
     approximation.
 
+    v1="slices"   spine references one file per section, in order. Every cut is
+                  a file boundary, so sections are visible and movable. Default.
     v1="source"   spine references the ORIGINAL recording with source in/out,
-                  so shots keep handles and can be extended.
-    v1="roughcut" spine is a single flattened rough_cut.mp4. Simpler, matches
-                  the delivered cut exactly, but no handles.
+                  so shots keep handles and can be extended, at the cost of the
+                  sections not existing as separate media.
     """
+    slices_dir = slices_dir or Path("slices")
     fcpxml = ET.Element("fcpxml", version="1.9")
     resources = ET.SubElement(fcpxml, "resources")
 
@@ -373,7 +376,41 @@ def write_fcpxml(
     spine = ET.SubElement(sequence, "spine")
 
     spine_clips: list[tuple[ET.Element, int, int]] = []
-    if v1 == "roughcut":
+    if v1 == "slices":
+        for index, keep in enumerate(timeline.keeps, start=1):
+            ref = f"rS{index}"
+            asset = ET.SubElement(
+                resources,
+                "asset",
+                id=ref,
+                name=f"{index:04d}",
+                start="0s",
+                duration=rational(keep["frames"], rate),
+                hasVideo="1",
+                hasAudio="1",
+                audioSources="1",
+                audioChannels="2",
+                format="r0",
+            )
+            ET.SubElement(
+                asset,
+                "media-rep",
+                kind="original-media",
+                src=(slices_dir / f"{index:04d}.mp4").resolve().as_uri(),
+            )
+            clip = ET.SubElement(
+                spine,
+                "asset-clip",
+                ref=ref,
+                name=f"{index:04d}",
+                offset=rational(keep["of_start"], rate),
+                start="0s",
+                duration=rational(keep["frames"], rate),
+                format="r0",
+                tcFormat=tc_format,
+            )
+            spine_clips.append((clip, keep["of_start"], 0))
+    elif v1 == "roughcut":
         clip = ET.SubElement(
             spine,
             "asset-clip",
@@ -467,14 +504,6 @@ def write_build_script(
     # file. The naive form (`-ss A -to B -i src` repeated per keep) opens a
     # decoder per segment and falls over on a long cut list.
     render_rate = render_rate or rate
-    parts, labels = [], []
-    for index, keep in enumerate(timeline.keeps):
-        a = rate.to_seconds(keep["sf_start"])
-        b = rate.to_seconds(keep["sf_end"])
-        parts.append(f"[0:v]trim=start={a:.6f}:end={b:.6f},setpts=PTS-STARTPTS[v{index}]")
-        parts.append(f"[0:a]atrim=start={a:.6f}:end={b:.6f},asetpts=PTS-STARTPTS[a{index}]")
-        labels.append(f"[v{index}][a{index}]")
-    filtergraph = ";".join(parts) + ";" + "".join(labels) + f"concat=n={len(timeline.keeps)}:v=1:a=1[outv][outa]"
 
     lines = [
         "#!/usr/bin/env bash",
@@ -497,9 +526,11 @@ def write_build_script(
             'SRC="$OUT/source_progressive.mov"',
             "",
         ]
-    # x264 encodes progressive unless told otherwise, which would quietly
-    # flatten an interlaced source into combed progressive frames. Keep the
-    # field order the source had.
+    # One ffmpeg per slice, not one filtergraph for the whole programme. At 300
+    # cuts the single-graph form was a 45,000-character command line and a
+    # re-encode of the entire hour; per-slice it is 300 short jobs that are
+    # restartable, parallelisable, and produce the sections themselves as the
+    # deliverable rather than a flattened cut.
     ilace = ""
     if field_order in ("tt", "tb"):
         ilace = " -flags +ilme+ildct -top 1"
@@ -507,13 +538,20 @@ def write_build_script(
         ilace = " -flags +ilme+ildct -top 0"
 
     lines += [
-        "# 1. Rough cut -- the cut only, no graphics. Single decode.",
-        f"#    Field order preserved: {field_order}." if ilace else "",
-        'ffmpeg -y -i "$SRC" -filter_complex "' + filtergraph + '" \\',
-        f'  -map "[outv]" -map "[outa]" -c:v libx264 -crf 18 -preset medium{ilace} \\',
-        '  -c:a aac -b:a 192k "$OUT/rough_cut.mp4"',
-        "",
+        "# 1. Slices. One file per kept section, in order. These ARE the edit:",
+        "#    every cut is a file boundary, so sections can be seen, reordered",
+        "#    and replaced without re-cutting anything.",
+        'mkdir -p "$OUT/slices"',
     ]
+    for index, keep in enumerate(timeline.keeps, start=1):
+        a = rate.to_seconds(keep["sf_start"])
+        b = rate.to_seconds(keep["sf_end"])
+        lines.append(
+            f'[ -s "$OUT/slices/{index:04d}.mp4" ] || ffmpeg -y -ss {a:.6f} -to {b:.6f} '
+            f'-i "$SRC" -c:v libx264 -crf 18 -preset medium{ilace} '
+            f'-c:a aac -b:a 192k "$OUT/slices/{index:04d}.mp4"'
+        )
+    lines.append("")
 
     # Graphics carry no timing obligation. They are not locked to audio, and
     # the overlay filter samples them in the output timebase, so whatever rate
@@ -543,49 +581,47 @@ def write_build_script(
             f'ffmpeg -y -ss {at:.3f} -i "$OUT/graphics/{slug}.mov" -frames:v 1 '
             f'"$OUT/graphics/stills/{slug}.png"'
         )
-    if final == "hyperframes":
-        resamples = not (rate.is_exact_integer and rate.num == nominal)
-        lines += ["", "# 5. Full video, rendered by HyperFrames from the clips composition,"]
-        if resamples:
-            lines += [
-                f"#    which holds the footage as well as the graphics. The source is",
-                f"#    {rate} and this renders at {nominal}, so THE FOOTAGE IS RESAMPLED.",
-                "#    Use --final ffmpeg if you want it left alone.",
-            ]
+    if final == "none":
         lines += [
+            "",
+            "# No flat render. The slices plus edit.fcpxml ARE the deliverable:",
+            "# import the XML and every section is already in order, aligned, with",
+            "# the graphics layered above it. Pass --final ffmpeg if you also want",
+            "# a flat file for review or upload.",
+        ]
+    elif final == "hyperframes":
+        lines += [
+            "",
+            "# Optional flat render by HyperFrames from the clips composition.",
             "#    clips/media/source.mp4 must exist.",
             f'npx hyperframes render "$RECIPE/clips" --fps {nominal} -o "$OUT/final.mp4"',
         ]
     else:
-        # Each graphic is overlaid as its own clip at its own moment, rather
-        # than flattening everything into one full-length stream first. A clip
-        # only exists while it is on screen, so any rate difference between the
-        # graphics and the timeline stays inside that clip's own motion instead
-        # of being smeared across the programme. The footage is never touched.
-        parts, prev = [], "[0:v]"
-        inputs = []
-        for index, element in enumerate(elements, start=1):
-            at = rate.to_seconds(element["place_frames"])
-            inputs.append(f'-i "$OUT/graphics/{element["slug"]}.mov"')
-            label = f"[g{index}]"
-            out = f"[o{index}]" if index < len(elements) else "[v]"
-            parts.append(f"[{index}:v]setpts=PTS+{at:.6f}/TB{label}")
-            parts.append(
-                f"{prev}{label}overlay=format=auto:eof_action=pass:repeatlast=0{out}"
-            )
-            prev = out
+        parts, inputs, prev = [], [], "[0:v]"
+        concat_inputs = " ".join(
+            f'-i "$OUT/slices/{i:04d}.mp4"' for i in range(1, len(timeline.keeps) + 1)
+        )
+        n = len(timeline.keeps)
+        streams = "".join(f"[{i}:v][{i}:a]" for i in range(n))
         lines += [
             "",
-            "# 5. Full video: each graphic overlaid as its own clip, at its own",
-            "#    time, over the untouched rough cut. Nothing re-renders the",
-            "#    footage, so its rate and field order are whatever they were.",
-            'ffmpeg -y -i "$OUT/rough_cut.mp4" \\',
+            "# Optional flat render: concatenate the slices, then overlay each",
+            "# graphic at its own time. The slices remain the source of truth.",
+            f'ffmpeg -y {concat_inputs} \\',
+            f'  -filter_complex "{streams}concat=n={n}:v=1:a=1[cv][ca]" \\',
+            '  -map "[cv]" -map "[ca]" -c:v libx264 -crf 18 -c:a aac "$OUT/flat.mp4"',
         ]
-        lines += [f"  {inp} \\" for inp in inputs]
-        lines += [
-            '  -filter_complex "' + ";".join(parts) + '" \\',
-            '  -map "[v]" -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"',
-        ]
+        for index, element in enumerate(elements, start=1):
+            at = rate.to_seconds(element["place_frames"])
+            parts.append(
+                f'ffmpeg -y -i "$OUT/flat.mp4" -i "$OUT/graphics/{element["slug"]}.mov" '
+                f'-filter_complex "[1:v]setpts=PTS+{at:.6f}/TB[g];'
+                f'[0:v][g]overlay=format=auto:eof_action=pass:repeatlast=0[v]" '
+                f'-map "[v]" -map 0:a -c:a copy -c:v libx264 -crf 18 "$OUT/final.mp4"'
+            )
+        if parts:
+            lines += ["# (overlay pass; for many graphics chain these in one call)", parts[0]]
+
     lines += ["", 'echo "Package built in $OUT"', ""]
 
     path.write_text("\n".join(lines), encoding="utf-8")
@@ -648,9 +684,20 @@ def main() -> int:
         help="Skip ffprobe. Then --fps and the rest must be supplied explicitly.",
     )
     parser.add_argument(
+        "--captions",
+        choices=("srt", "layer"),
+        default="srt",
+        help=(
+            "How captions ship. `srt` (default) writes captions.srt as a subtitle "
+            "track: editable text, no render, no size. `layer` also renders them as "
+            "a transparent asset, which burns in the exact HyperFrames styling but "
+            "costs a full-length ProRes file, around 120GB for a 50-minute programme."
+        ),
+    )
+    parser.add_argument(
         "--final",
-        choices=("ffmpeg", "hyperframes"),
-        default="ffmpeg",
+        choices=("none", "ffmpeg", "hyperframes"),
+        default="none",
         help=(
             "How final.mp4 is assembled. `ffmpeg` composites the graphics over "
             "the rough cut, leaving the footage at whatever rate and field order "
@@ -673,11 +720,12 @@ def main() -> int:
     parser.add_argument("--reel", default="AX", help="CMX3600 reel name, 8 chars max.")
     parser.add_argument(
         "--v1",
-        choices=("source", "roughcut"),
-        default="source",
+        choices=("slices", "source", "roughcut"),
+        default="slices",
         help=(
-            "What the FCPXML spine references. `source` cuts the original recording "
-            "so shots keep handles; `roughcut` lays down the flattened rough_cut.mp4."
+            "What the FCPXML spine references. `slices` (default) points at one file "
+            "per section, so every cut is a file boundary and sections can be seen and "
+            "moved. `source` cuts the original recording instead, keeping handles."
         ),
     )
     parser.add_argument("--title", default="Andrew Cockburn")
@@ -762,7 +810,7 @@ def main() -> int:
         rate,
         lt_start=0.6,
         lt_dur=4.6,
-        caption_frames=timeline.total_frames if cues else 0,
+        caption_frames=timeline.total_frames if (cues and args.captions == "layer") else 0,
     )
 
     out = args.out.resolve()
@@ -868,6 +916,7 @@ def main() -> int:
         project_name=args.project_name,
         v1=args.v1,
         rough_cut=out / "rough_cut.mp4",
+        slices_dir=out / "slices",
         source_start_frames=source_start_frames,
         field_order=field_order,
         record_start_frames=record_start_frames,
@@ -1047,7 +1096,7 @@ def main() -> int:
     print(f"Package scaffolded in {out}")
     print(f"  timeline      {fmt_float(timeline.total_seconds)}s, {len(timeline.keeps)} clips")
     print(f"  graphics      {len(elements)} assets → {gfx_root}")
-    print(f"  captions      {len(cues)} cues")
+    print(f"  captions      {len(cues)} cues as {args.captions}")
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
     print(f"  format        {width}x{height} @ {rate}")
     print(f"  graphics      rendered at {render_rate.num} (no sync obligation)")
