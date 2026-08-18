@@ -30,7 +30,7 @@ type TestMetadata = {
   minAudioCorrelation: number;
   maxAudioLagWindows: number;
   renderConfig: {
-    fps: 24 | 25 | 30 | 50 | 60;
+    fps: 24 | 30 | 60;
     format?: "mp4" | "webm"; // Optional: defaults to "mp4"
     workers?: number; // Optional: auto-calculates if omitted
     /** Enable HDR color-space probing + HDR10 encode pipeline. */

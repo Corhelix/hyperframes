@@ -13,7 +13,7 @@
  */
 export interface EngineConfig {
   // ── Rendering ────────────────────────────────────────────────────────
-  fps: 24 | 25 | 30 | 50 | 60;
+  fps: 24 | 30 | 60;
   quality: "draft" | "standard" | "high";
   format: "jpeg" | "png";
   jpegQuality: number;

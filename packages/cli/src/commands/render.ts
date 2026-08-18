@@ -28,7 +28,7 @@ import { isDevMode } from "../utils/env.js";
 import { buildDockerRunArgs } from "../utils/dockerRunArgs.js";
 import type { RenderJob } from "@hyperframes/producer";
 
-const VALID_FPS = new Set([24, 25, 30, 50, 60]);
+const VALID_FPS = new Set([24, 30, 60]);
 const VALID_QUALITY = new Set(["draft", "standard", "high"]);
 const VALID_FORMAT = new Set(["mp4", "webm", "mov"]);
 const FORMAT_EXT: Record<string, string> = { mp4: ".mp4", webm: ".webm", mov: ".mov" };
@@ -59,7 +59,7 @@ export default defineCommand({
     fps: {
       type: "string",
       alias: "f",
-      description: "Frame rate: 24, 25, 30, 50, 60",
+      description: "Frame rate: 24, 30, 60",
       default: "30",
     },
     quality: {
@@ -126,10 +126,10 @@ export default defineCommand({
     // ── Validate fps ───────────────────────────────────────────────────────
     const fpsRaw = parseInt(args.fps ?? "30", 10);
     if (!VALID_FPS.has(fpsRaw)) {
-      errorBox("Invalid fps", `Got "${args.fps ?? "30"}". Must be 24, 25, 30, 50, or 60.`);
+      errorBox("Invalid fps", `Got "${args.fps ?? "30"}". Must be 24, 30, or 60.`);
       process.exit(1);
     }
-    const fps = fpsRaw as 24 | 25 | 30 | 50 | 60;
+    const fps = fpsRaw as 24 | 30 | 60;
 
     // ── Validate quality ───────────────────────────────────────────────────
     const qualityRaw = args.quality ?? "standard";
@@ -332,7 +332,7 @@ export default defineCommand({
 });
 
 interface RenderOptions {
-  fps: 24 | 25 | 30 | 50 | 60;
+  fps: 24 | 30 | 60;
   quality: "draft" | "standard" | "high";
   format: "mp4" | "webm" | "mov";
   workers: number;

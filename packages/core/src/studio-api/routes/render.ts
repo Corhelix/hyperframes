@@ -53,8 +53,7 @@ export function registerRenderRoutes(api: Hono, adapter: StudioApiAdapter): void
     const VALID_FORMATS = new Set(["mp4", "webm", "mov"]);
     const FORMAT_EXT: Record<string, string> = { mp4: ".mp4", webm: ".webm", mov: ".mov" };
     const format = VALID_FORMATS.has(body.format ?? "") ? (body.format as string) : "mp4";
-    const VALID_FPS = new Set([24, 25, 30, 50, 60]);
-    const fps = (VALID_FPS.has(body.fps as number) ? body.fps : 30) as 24 | 25 | 30 | 50 | 60;
+    const fps: 24 | 30 | 60 = body.fps === 24 || body.fps === 60 ? body.fps : 30;
     const quality = ["draft", "standard", "high"].includes(body.quality ?? "")
       ? (body.quality as string)
       : "standard";

@@ -150,9 +150,9 @@ FRAME`, source TC offset by the file's `01:00:00;00`, and all five layers
 - **Frame size and rate are matched everywhere.** All compositions are generated
   from the probed values, and graphics scale with frame height so 4K gets 4K-sized
   type, not 1080-sized type on a 4K canvas.
-- **Render rates: 24, 25, 30, 50, 60.** PAL is native — 25p in, 25p out, no
-  retime. NTSC renders at the nominal integer and gets `-itsscale 1.001` applied,
-  which is exact and resamples nothing.
+- **Render rate is capped at 24/30/60** by the engine. NTSC renders at the
+  nominal integer and gets `-itsscale 1.001` applied — exact, nothing resampled.
+  **PAL 25/50 is refused outright.**
 - **No timecode required.** Elapsed time from the head of the file is the
   reference. `out/edit_ledger.json` records every removal and every word's
   source→output mapping, which is the audit trail for sync.

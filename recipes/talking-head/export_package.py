@@ -66,9 +66,6 @@ from mediainfo import (
 
 HERE = Path(__file__).resolve().parent
 
-# What `hyperframes render` will accept (packages/cli/src/commands/render.ts).
-SUPPORTED_RENDER_FPS = {24, 25, 30, 50, 60}
-
 
 # ---------------------------------------------------------------------------
 # Timecode
@@ -657,19 +654,18 @@ def main() -> int:
     else:
         rate = parse_rate(edl.get("fps", 30), drop=args.drop_frame)
 
-    # Graphics render at the rate's nominal integer. For PAL that IS the rate,
-    # so nothing further is needed. For NTSC the timebase is re-stamped
-    # afterwards with -itsscale 1.001, which is exact and resamples nothing.
-    #
-    # Retiming a 25p source to 30 was never an option worth offering: 1.2x is
-    # not a clean pulldown, so it costs either duplicated frames or a 20% speed
-    # change that drags audio pitch, every title and the whole ledger with it.
+    # The render engine only accepts 24, 30 or 60 (renderOrchestrator.ts types
+    # it as `fps: 24 | 30 | 60`). NTSC rates are handled by rendering at the
+    # nominal integer and re-stamping the timebase afterwards, which is exact
+    # and resamples nothing. PAL has no such trick -- 25 and 50 simply cannot
+    # be rendered.
     render_rate = FrameRate(rate.nominal, 1)
-    if rate.nominal not in SUPPORTED_RENDER_FPS:
+    if rate.nominal not in (24, 30, 60):
         raise SystemExit(
             f"Frame rate {rate} cannot be rendered. `hyperframes render` accepts "
-            f"{sorted(SUPPORTED_RENDER_FPS)}. Conform the source first, or pass "
-            "--fps with a supported rate if you accept the retime."
+            "only 24, 30 or 60, so 25 and 50 are out. Options: conform the source "
+            "to a supported rate first, or use --no-probe --fps 30 and retime the "
+            "graphics in your NLE."
         )
     ntsc = rate.den == 1001
 
