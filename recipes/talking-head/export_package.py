@@ -1095,7 +1095,7 @@ def main() -> int:
 
     print(f"Package scaffolded in {out}")
     print(f"  timeline      {fmt_float(timeline.total_seconds)}s, {len(timeline.keeps)} clips")
-    print(f"  graphics      {len(elements)} assets → {gfx_root}")
+    print(f"  graphics      {len(elements)} assets -> {gfx_root}")
     print(f"  captions      {len(cues)} cues as {args.captions}")
     print(f"  ledger        {len(ledger_words)} words mapped source -> output")
     print(f"  format        {width}x{height} @ {rate}")
