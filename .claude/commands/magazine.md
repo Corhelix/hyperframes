@@ -3,12 +3,12 @@ description: Lay finished content out as a data-forward editorial magazine using
 argument-hint: "[context or target]"
 ---
 <!-- Source: slash-commands/magazine.md — .claude/commands/magazine.md must match exactly -->
-<!-- Skill: skills/writing/magazine/ (SKILL.md + references/)
+<!-- Skill: magazine (SKILL.md + references/) — resolution order in "The reference files are the authority"
      Pattern: layout companion to the book-spine/book-forge family. Takes finished or
      near-finished content and lays it out as a data-forward editorial magazine —
      fixed template library, locked colour code, chart-grammar, engineered pacing.
      Design brief: projects/command-system/tasks/2026-08-05-magazine-editorial-skill/
-     DRAFT-EDITORIAL-MAGAZINE-STYLE-GUIDE-v0.1-2026-08-05.html (structural audit of
+     DRAFT-MAGAZINE-BRAND-KIT-v0.3-2026-08-05.html (structural audit of
      9 McCrindle Research publications, layout/typography only, never their copy).
      Renders on the existing Landscape Module Doctrine — extends it, does not compete
      with it. Built 2026-08-05. -->
@@ -109,18 +109,34 @@ Stop signs. If any is true, re-diagnose before continuing.
 At the start of EACH phase, open and read the corresponding file in full. Do NOT
 summarise, paraphrase, skip, or work from memory.
 
+**Resolve `<SKILL>` first**, using the same resolution order the viewports use. Take the
+first that exists; every path below is relative to it:
+
 ```
-Phase 1 → skills/writing/magazine/references/phase-1-inventory.md
-Phase 2 → skills/writing/magazine/references/phase-2-taxonomy.md
-Phase 3 → skills/writing/magazine/references/phase-3-colour-code.md
-Phase 4 → skills/writing/magazine/references/phase-4-data-viz.md
-Phase 5 → skills/writing/magazine/references/phase-5-pacing.md
-Phase 6 → skills/writing/magazine/references/phase-6-render.md
+1. ~/.claude/skills/magazine/         this machine's runtime
+2. .claude/skills/magazine/           inside a repo — an iOS session finds it here
+3. skills/writing/magazine/           Corhelix/Agent-and-Config-Files, the authoring home
+```
+
+If none resolve, **STOP and say so** rather than proceeding from memory. A phase run
+without its reference is the drift this section exists to prevent, and it will look like
+a completed phase.
+
+```
+Phase 1 → <SKILL>/references/phase-1-inventory.md
+Phase 2 → <SKILL>/references/phase-2-taxonomy.md
+Phase 3 → <SKILL>/references/phase-3-colour-code.md
+Phase 4 → <SKILL>/references/phase-4-data-viz.md
+Phase 5 → <SKILL>/references/phase-5-pacing.md
+Phase 6 → <SKILL>/references/phase-6-render.md
 ```
 
 The full skill (hard rules, the "cheat" allowance, related-skill hand-offs) is
-`skills/writing/magazine/SKILL.md`. The design brief behind the taxonomy and rules is
-`projects/command-system/tasks/2026-08-05-magazine-editorial-skill/DRAFT-EDITORIAL-MAGAZINE-STYLE-GUIDE-v0.1-2026-08-05.html`.
+`<SKILL>/SKILL.md`. The style pack example is `<SKILL>/assets/STYLE-PACK-EXAMPLE.html`.
+
+The design brief behind the taxonomy and rules lives in `Corhelix/Agent-and-Config-Files`
+at `projects/command-system/tasks/2026-08-05-magazine-editorial-skill/`:
+`DRAFT-MAGAZINE-BRAND-KIT-v0.3-2026-08-05.html` and `DECISION-LOG.md`.
 
 ---
 
