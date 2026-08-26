@@ -105,7 +105,7 @@ Cite specific files/functions/lines for each. Each check returns PASS or FAIL wi
 
 **Check 6 — Integration integrity.** API contracts honoured. Payloads match schemas. Auth flows complete. Rate limits respected. Webhook contracts validated. Idempotency where needed.
 
-**Check 7 — Definition of done.** Does it demonstrably work? Are tests present and meaningful? Can it be debugged? Can it be handed off?
+**Check 7 — Definition of done.** Does it demonstrably work through all three lenses in VERIFICATION below — not builds-and-tests-pass, which is Lens 1 alone? Are tests present and meaningful? Can it be debugged? Can it be handed off?
 
 Use IDs: F# for findings (FAIL), G# for verified-sound (PASS), R# for risks.
 
@@ -148,6 +148,51 @@ Open the passed report in browser for stamping.
 - HTML for approval deliverables
 - Use CLARITY OS branded template
 - Cloud-only — never propose local-machine paths
+
+---
+
+## VERIFICATION — what "verified" means here
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`. Summarised here so this
+command is self-contained; that file is the authority if the two ever disagree.
+
+Verified means a person performed it and watched the result. Anything else is
+untested, and the word "untested" appears in the finding. A PASS awarded on a read of
+the source, without the thing having been run, is the failure this section exists to
+prevent — and it is the easiest one to commit in a code audit, because the source is
+right there.
+
+**Lens 1 — Code.** Builds, tests pass, types check, no console error, no unhandled
+rejection, no silent catch. Proves it starts and executes. Proves nothing is
+reachable or connected.
+
+**Lens 2 — Visual.** Judge what the system actually emits, never the code that emits
+it. For a screen, a real browser at the stated viewports, every reachable state
+including empty, loading, error, exactly one item and a very long value. For an API,
+a CLI, a pipeline or a workflow, the subject is the response body, the written file,
+the row that landed, the message that arrived, the exit code and what went to stderr.
+Keep the emitted artefact as evidence exactly as a capture would be kept.
+
+**Lens 3 — Journey.** Walk the flow end to end by hand as the user holding those
+permissions. Every gesture performed, not asserted. Stop at the first gesture that
+cannot be completed and report from there.
+
+Checks 4 and 6 are where this bites hardest. An unauthorised action that appears
+blocked but silently succeeded looks identical to a pass from one side, so assert the
+negative both ways: the forbidden action was refused *and* the thing it targeted
+survived. A contract honoured in the schema is not a contract honoured on the wire.
+
+Every finding carries an evidence path; a defect nobody captured is a rumour. A lens
+is never skipped for want of a surface — it translates. Skipping one is a recorded
+decision naming which lens and why.
+
+**Probes are artefacts, not scratch.** `command-includes/_HARNESS-STANDARD.md` carries
+the exit-code contract and the recurring probe types. Every check that can be a script
+becomes one, committed, so the next audit reuses it rather than rewriting it. Exit `0`
+pass, `1` fail, `2` misconfigured. Probes must not be vacuous: "the signed-out client
+sees zero rows" is satisfied by a table that is simply empty, so seed the condition
+that makes a pass meaningful, then assert, then clean up. Print the numbers observed,
+never the bare word PASS.
 
 ---
 
@@ -235,3 +280,20 @@ For the second case, the response is a form with:
 Then keep working on whatever does not depend on the answer. A session that halts
 entirely on one blocked item, when six others are unblocked, has turned one
 permission decision into a stopped thread.
+
+
+## Visual findings — when the artefact carries a diagram, wireframe or rendered page
+
+Audit the marks as well as the argument, against `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md`:
+
+| Check | It is a finding when |
+|---|---|
+| Kit values | any colour, alpha, shadow, radius or blur is not in `CLARITY-OS-TEMPLATE.html` `:root` |
+| Workflow containers | a process is drawn in lanes, bands, grid rows, summary columns or cards |
+| Node canvas misuse | the node model is used for a plain business process, or a plain process for real orchestration |
+| Wireframe headings | headings or body are set as real text rather than greyboxed |
+| Invented data | a figure, name or date the source never supplied is presented as real |
+| Wrong decision surface | a strategy or proposal carries a per-row stamp register, or an audit has no register at all |
+
+Each becomes a row in the register like any other finding.
+

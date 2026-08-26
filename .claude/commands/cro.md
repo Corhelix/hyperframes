@@ -44,6 +44,42 @@ Ranked CRO report: each issue = what + evidence (the rendered surface / friction
 
 ---
 
+## VERIFICATION — what "verified" means here
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`. Summarised here so this
+command is self-contained; that file is the authority if the two ever disagree.
+
+This run is diagnostic and read-only, so what needs verifying is the **evidence**, not
+a build. Verified means a person performed it and watched the result. A flag inferred
+from a static parse, or a metric quoted from a collector run that failed, is untested,
+and the word "untested" appears beside it.
+
+**Lens 2 — Visual, and it is the load-bearing one here.** Judge the rendered page, not
+the markup. The collector already flags that GHL forms render in an iframe and are not
+statically countable — that is this lens stating itself. Anything the static parse
+cannot see (real field count, competing CTAs below the fold, a control that draws but
+sits beneath something else, text colliding at a narrower width) is resolved in a real
+browser at the stated viewports or it is not resolved. Capture every reachable state,
+including the ones nobody remembers: a validation error, a slow response, a failed
+submit.
+
+**Lens 3 — Journey.** The fill-submit-verify is a journey walk and should be treated
+as one: every gesture performed, in one sitting, ending in an observed confirmation.
+It beats GA4 `form_submit` precisely because it observes the outcome rather than
+trusting an event that misfires on GHL and AJAX forms. Stop at the first gesture that
+cannot be completed and report from there; a form broken at step 3 is a more useful
+finding than a LIFT score on a page nobody can submit.
+
+**Read `manifest.json` before quoting any number.** A failed collector pull leaves no
+file, and an absent file read as a zero is how a wrong conversion rate reaches a
+report. Carry every failure into the output as a named gap.
+
+Every issue carries an evidence path — the capture, the flag, or the metric with its
+pull date. An issue nobody captured is a rumour, and a ranked list of rumours is worse
+than a short list of proven ones.
+
+---
+
 ## GATE MECHANICS — the hooks that will deny you
 
 Canonical text: `command-includes/_GATE-MECHANICS.md`. Summarised here so this

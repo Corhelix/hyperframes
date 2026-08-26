@@ -104,6 +104,24 @@ Write complete code following the patterns from the context node. Handle failure
 - Risk mitigation (every identified risk has its in-code mitigation)
 - Definition of done (every check passes)
 
+
+## Before you draw anything
+
+Read `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md`. It is the authority on the marks that go on the page, and every rule
+in it is a correction of something that went wrong before:
+
+- **Every value comes from the kit** (`CLARITY-OS-TEMPLATE.html` `:root`). One tint at
+  6%, two shadows, radius 4/8/14/pill. There is no opacity ladder and no glass beyond
+  the sticky nav at 94% / 12px. An invented alpha, gradient or tinted shadow is a defect.
+- **A workflow is glyph-led with no containers.** Glyph, label, time, line. No lane, no
+  band, no grid row, no summary column, no card. Ownership is the glyph, not the row.
+- **The node canvas is reserved** for the engine, n8n or agent orchestration. Never for
+  a plain business process.
+- **Wireframe headings are bars.** Only the section tag, eyebrow, CTA labels, field
+  labels, tiles, embeds and footer carry real words.
+- **Never invent data.** A figure the source did not supply is a bracketed placeholder,
+  visibly pending.
+
 ## Phase 4 — Quality gate (three-strike)
 
 Read the output cold as the CTO. Would you approve this PR:

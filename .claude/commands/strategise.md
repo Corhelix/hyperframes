@@ -128,7 +128,9 @@ Present as a structured document with clear headers for each section (4.1-4.6). 
 
 ## Output location
 
-Strategic recommendations are decision-bearing. Save as `DRAFT-STRATEGY-v0.1-YYYY-MM-DD.html` using the canonical decision-tagging scaffold (`../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`) so each recommendation is a stamp-able row (LOCK / REVISE / DROP / DEFER). ID convention: `D` decisions · `R` risks · `Q` open questions · `S` scope boundaries.
+Save as `DRAFT-STRATEGY-v0.1-YYYY-MM-DD.html`. A strategy is **read and approved as a piece, not stamped line by line** — do not use the decision-tagging scaffold. One whole-document sign-off at the end, plus per-section Yes / Revise and a notes field. Never LOCK / REVISE / DROP / DEFER.
+
+**Before drawing anything, read `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md`.** It is the authority on the marks that go on the page: every value comes from the kit and nothing is invented; workflows are glyph-led with no containers; wireframe headings are bars while tags, eyebrows, CTAs and field labels carry real words; anything the client has not supplied is a bracketed placeholder, never invented filler. ID convention: `D` decisions · `R` risks · `Q` open questions · `S` scope boundaries.
 
 Location: `projects/<entity-or-task>/tasks/YYYY-MM-DD-<slug>/`. When approved: `APPROVED-YYYY-MM-DD.html`. HTML is canonical, no `.md` companion (per `feedback_everything_to_github_html_canonical`).
 
