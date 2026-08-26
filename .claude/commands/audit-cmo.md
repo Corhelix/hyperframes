@@ -418,6 +418,22 @@ Save and `open` the HTML in browser so Andrew can stamp.
 
 ---
 
+
+## Visual findings — when the artefact carries a diagram, wireframe or rendered page
+
+Audit the marks as well as the argument, against `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md`:
+
+| Check | It is a finding when |
+|---|---|
+| Kit values | any colour, alpha, shadow, radius or blur is not in `CLARITY-OS-TEMPLATE.html` `:root` |
+| Workflow containers | a process is drawn in lanes, bands, grid rows, summary columns or cards |
+| Node canvas misuse | the node model is used for a plain business process, or a plain process for real orchestration |
+| Wireframe headings | headings or body are set as real text rather than greyboxed |
+| Invented data | a figure, name or date the source never supplied is presented as real |
+| Wrong decision surface | a strategy or proposal carries a per-row stamp register, or an audit has no register at all |
+
+Each becomes a row in the register like any other finding.
+
 ## Output format — template selection
 
 The audit's primary scaffold is mandated above: `HTML-DECISION-TAGGING-PATTERN.html`. Audits are always decision-bearing. The full selection rule is the authority at `alc-group/brand-ops/templates/README.md`. The quick decision tree below covers when `/audit-cmo` would reach for a different template (rare — usually only when chaining into a fix in the same delivery):
@@ -467,6 +483,38 @@ This command produces written output. The Core Writing Standard (`skills/copywri
 Three or more AI-tell patterns in one section of your audit report equals full rewrite, not find-and-replace.
 
 See `protocols/output-protocol.md` § Core Writing Standard for the cross-phase enforcement protocol.
+
+---
+
+## VERIFICATION — what "verified" means here
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`. Summarised here so this
+command is self-contained; that file is the authority if the two ever disagree.
+
+This command audits copy, so Lens 1 rarely applies and Lens 2 does most of the work.
+Verified means a person performed it and watched the result. Anything else is
+untested, and the word "untested" appears in the finding.
+
+**Judge the copy as rendered, never as source.** Where the asset is a live page, an
+email, an ad or a document, the subject is what the reader actually sees at the
+viewports and clients they use — not the markdown, not the CMS field, not the draft.
+A line that reads well in the source and is truncated, clipped, orphaned above the
+fold, or sitting at unreadable contrast has failed as copy, and citing the source text
+would have recorded it as a PASS. Capture the rendered surface and quote from it.
+
+**The journey lens applies to funnel coherence.** Check 5 asks whether the asset
+connects to what comes before and after. That is answered by walking the path a real
+reader takes — the ad to the page to the form to the confirmation — not by reasoning
+about it from the asset in isolation. Walk it as the reader, every gesture performed,
+and stop at the first step that cannot be completed.
+
+Every finding carries an evidence path; a defect nobody captured is a rumour. Captures
+are named to the check and to the viewport they were taken in, because a defect at
+1280 is not a defect at 1440, and captions state what is visibly in the frame and
+nothing else. A caption that interprets or excuses is a caption that hides.
+
+A lens is never skipped for want of a surface — it translates. Skipping one is a
+recorded decision naming which lens and why, never a silence.
 
 ---
 

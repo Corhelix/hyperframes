@@ -23,7 +23,7 @@ You can also combine: `/review CMO CTO` (both lenses).
 
 | MCP | Where it plugs in | Use for |
 |-----|-------------------|---------|
-| **Semgrep** (`mcp__semgrep__*`) | CTO lens, allowlisted repos | Run static analysis when reviewing code on `clarity-os-app`, `more-than-marks`, `proposal-os`. Findings feed the CTO-lens output. Skip elsewhere |
+| ~~**Semgrep**~~ — **DEPRECATED 2026-08** | — | Deprecated server-side. Only `mcp__semgrep__deprecation_notice` remains; every scanning tool is gone. Do not plan a static-analysis step around it until a replacement is wired |
 | **Playwright** (`mcp__playwright__*`) | CMO lens (marketing surfaces), CTO lens (UI work) | Snapshot live page when reviewing marketing surfaces. Render generated HTML when reviewing UI commits |
 | **Context7** (`mcp__context7__*`) | CTO lens — verify any library API the reviewed code calls actually exists in the installed version |
 | **Supabase** (`mcp__supabase__*`) | CTO lens — verify the reviewed code matches the live schema. Read-only |
@@ -79,7 +79,7 @@ Follow the viewport's Step 6 audit exactly as written.
 | Under-engineering | Error handling, validation, edge cases all present. |
 | Architecture bypass | Data flows through intended layers. No shortcuts. |
 | Security | No secrets, input validated, auth enforced. |
-| Functionality | Demonstrably works. Builds. Tests pass. |
+| Functionality | Demonstrably works through all three lenses below — not builds-and-tests-pass, which is Lens 1 alone. |
 
 **PM Audit** (from `viewports/pm.md`):
 
@@ -119,6 +119,26 @@ SUMMARY:
 
 ---
 
+## Visual review — when the artefact has a diagram, wireframe or rendered page
+
+Read `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md` and check the marks, not only the argument:
+
+- **Invented values.** Any colour, alpha, shadow, radius or blur not in the kit's
+  `:root` is a defect. There is one tint at 6%, two shadows, radius 4/8/14/pill, and
+  no glass beyond the sticky nav at 94% / 12px.
+- **Containers around a workflow.** Lanes, bands, grid rows, summary columns or cards
+  around a process are a defect. Glyph, label, time, line. Ownership is the glyph.
+- **Wireframe headings written as real text.** Headings and body are greyboxed; only
+  the section tag, eyebrow, CTA labels, field labels, tiles, embeds and footer carry
+  words.
+- **Invented data.** Figures, names or dates the source did not supply must be
+  bracketed and visibly pending.
+- **A register where a register does not belong.** Audits stamp. Strategies, research
+  and proposals do not — they take a whole-document sign-off plus per-section
+  Yes / Revise and notes.
+
+State each as a finding with the file and line, then what to change.
+
 ## Output location
 
 Save review document to:
@@ -143,6 +163,47 @@ This command produces written output. Before any draft is presented, written to 
 Covers AI-tells detection (banned vocab, bloated verbs, dead openings/transitions), negative parallelism (5A-5I), analogy and metaphor control (6), AU/UK spelling (11), and the 13-step sweep (10). Three or more patterns in one section equals full rewrite, not find-and-replace.
 
 See `protocols/output-protocol.md` § Universal Quality Layer for the full enforcement protocol across phases.
+
+---
+
+## VERIFICATION — what "verified" means here
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`. Summarised here so this
+command is self-contained; that file is the authority if the two ever disagree.
+
+This command is the final quality gate before delivery, so it is the one place a
+Lens-1-only pass does the most damage. Verified means a person performed it and
+watched the result. Anything else is untested, and the word "untested" appears in
+the review output.
+
+**Lens 1 — Code.** Builds, tests pass, types check, no console error, no unhandled
+rejection, no silent catch. Proves it starts. Proves nothing is reachable, legible,
+correctly placed, or connected to anything a person wants to do.
+
+**Lens 2 — Visual.** Drive the real thing and judge the rendered result, not the
+markup. Every reachable state at the stated viewports: empty, loading, populated,
+error, and the ones nobody remembers — exactly one item, a very long value, a failed
+request, a slow response. For anything without a screen, the subject is the artefact
+it emits: the response body, the written file, the row that landed, the exit code.
+
+**Lens 3 — Journey.** Walk each journey end to end by hand, in one sitting, as the
+user who holds that journey's permissions. Every gesture performed, not asserted. No
+shortcutting by URL, no seeding state through the API. Stop at the first gesture that
+cannot be completed and report from there — a journey broken at step 3 of 9 is more
+useful than nine checks reported green.
+
+Twenty-four honest acceptance checks once passed on a canvas that could not join two
+nodes, which was the entire product. The checks were not wrong; they were atomic, and
+a product is not the sum of its gestures.
+
+Every finding carries an evidence path — a defect nobody captured is a rumour. A lens
+is never skipped for want of a surface; it translates. Skipping one is a recorded
+decision naming which lens and why, never a silence.
+
+**Probes are artefacts, not scratch.** `command-includes/_HARNESS-STANDARD.md` carries
+the exit-code contract and the recurring probe types. Read the harness directory before
+writing a new one. Exit `0` pass, `1` fail, `2` misconfigured — the third is not
+decoration, because without it a broken probe reads as a passing product.
 
 ---
 

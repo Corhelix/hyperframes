@@ -291,6 +291,46 @@ See `protocols/output-protocol.md` § Core Writing Standard for the cross-phase 
 
 ---
 
+## VERIFICATION — writing journeys that can actually be walked
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`. Summarised here so this
+command is self-contained; that file is the authority if the two ever disagree.
+
+This command does not verify anything — it **produces** the journeys and states that
+`/goal-build` and `/review` will later verify against. So the standard applies here as
+a writing constraint: a journey written loosely cannot be walked, and an unwalkable
+journey is checked off by whoever is tired rather than by whoever is right.
+
+**Every journey must name its walker.** Which user, holding which permissions. A
+journey written for "the user" gets walked as an admin, and the member-facing hole is
+found in week three. Section 2 already documents click-by-click; add the role.
+
+**Every journey must end in an observable final state.** Not "user lands on the
+resulting screen" but what is visibly true when they arrive — the record that now
+exists, the confirmation shown, the email that arrives. A journey with no observable
+end cannot pass or fail, so it will pass.
+
+**Name the defining gesture.** Every product has one action that *is* the product:
+building a form and receiving a response, a stranger booking a slot, joining two nodes.
+Name it in Section 2 and put it first. It becomes the first acceptance check and the
+first journey walked, and it is verified before anything is stacked on top of it. If it
+cannot be performed by hand, the product does not work, whatever else is green.
+
+**Section 3 is the verification surface, not a table to fill in.** Empty, loading,
+populated, error, and the ones nobody remembers — exactly one item, a very long value,
+a failed request, a slow response. Every cell left generic becomes a defect found in a
+browser later, at far greater cost than defining it here.
+
+**Section 6 viewports are the capture list.** State them as numbers, because a defect
+at 1280 is not a defect at 1440, and every later capture is named to the viewport it
+was taken in.
+
+Phase 5's user test asks you to walk the activation journey. Walking it on paper is a
+legibility check, not verification. Say so in the output rather than letting a paper
+walkthrough be read later as evidence the flow works.
+
+---
+
 ## GATE MECHANICS — the hooks that will deny you
 
 Canonical text: `command-includes/_GATE-MECHANICS.md`. Summarised here so this

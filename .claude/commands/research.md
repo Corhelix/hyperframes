@@ -223,7 +223,9 @@ Present the final output with:
 
 ## Output location
 
-Save as: `DRAFT-RESEARCH-v0.1-YYYY-MM-DD.html` (branded template) in `projects/<entity-or-task>/tasks/YYYY-MM-DD-<slug>/`
+Save as: `DRAFT-RESEARCH-v0.1-YYYY-MM-DD.html` on `alc-group/brand-ops/templates/CLARITY-OS-TEMPLATE.html` in `projects/<entity-or-task>/tasks/YYYY-MM-DD-<slug>/`
+
+**When the findings need a visual, read `alc-group/brand-ops/templates/VISUAL-LANGUAGE.md` first.** Every colour, shadow, radius and alpha comes from the kit's `:root` — there is no opacity ladder and no glass beyond the sticky nav. A process is glyph-led with no lanes or cards. A figure the research did not establish is a bracketed placeholder, never a plausible-looking number.
 When approved: `APPROVED-YYYY-MM-DD.html` (HTML is canonical, no `.md` companion — per `feedback_everything_to_github_html_canonical`)
 
 ---
