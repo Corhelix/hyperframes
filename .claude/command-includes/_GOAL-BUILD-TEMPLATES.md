@@ -92,7 +92,7 @@ Phase 3 sweep: not-run
 | X1 | code/visual/journey/[dimension] | [low/med/high/critical] | [exact steps] | open | evidence/X1-*.png | — |
 ```
 
-**The column order is load-bearing.** The stop gate parses positionally: Status is the fifth cell of a defect row and the fourth of a matrix row. Insert a column to the left of Status in either table and the gate reads the wrong cell, which makes the run un-endable. Add new columns to the right, or change the gate in the same commit.
+**Keep the column order anyway.** Since gate v4 the Status column is located by name from the header row, so inserting a column no longer makes a run un-endable — the trap caught two real runs before it was closed. Position (fifth cell of a defect row, fourth of a matrix row) is now only the fallback for a table with no header. Keep the canonical order regardless: every reader, script and reviewer downstream still expects it.
 
 Status path: `open` to `fixed` to `retested`. A defect closes only at `retested`, with the affected acceptance checks re-run, any journey the fix touches re-walked, and the Re-run column naming them. Every row carries an evidence path — a defect nobody photographed is a rumour. Material means it fails an acceptance check, breaks a journey, or violates a non-negotiable; anything else may close as accepted risk through a `DECISIONS.md` entry. The header line flips to `Phase 3 sweep: complete (YYYY-MM-DD)` only after every dimension tester has run; the stop gate reads it.
 
