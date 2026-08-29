@@ -52,9 +52,10 @@ Read these in your next action. Path resolution: relative to this repo root.
 4. `knowledge-bank/marketing-and-gtm.md` — funnel architecture, unit economics, CAC and payback
 5. `skills/digital-marketing/product-marketing-context/SKILL.md` — switching forces, customer language
 6. `skills/copywriting/Proofread-Anti-AI-Standard.md` — applies to the document you produce
+7. `command-includes/_GOOGLE-ADS-BUILD-STANDARD.md` — **what a complete campaign physically contains.** You cannot specify an architecture without it: a strategy that names campaigns and budgets but no asset set is incomplete, and will be written straight over an account with blank ad surfaces without noticing
 
 **GATE — present after the six reads:**
-> Doctrine loaded: ad-ops thresholds + paid-ads model + strategy kernel + GTM + switching forces + writing standard.
+> Doctrine loaded: ad-ops thresholds + paid-ads model + strategy kernel + GTM + switching forces + writing standard + build standard.
 
 If a file is missing, flag it explicitly (`MISSING: <path>`) and continue. A missing lens is a system bug, not a licence to reason without it.
 
@@ -241,6 +242,7 @@ Anxiety is the one paid accounts skip. On a considered purchase the click is che
 - Ad group granularity and the reason for that granularity
 - Match-type doctrine, and what broad is allowed to do
 - The negative architecture: which shared lists exist, what each protects against, and which campaigns each must be linked to. **Every campaign gets every list unless there is a written reason it does not.**
+- **The asset set each campaign will carry**, specified against `command-includes/_GOOGLE-ADS-BUILD-STANDARD.md`: sitelinks and their destinations, callouts, structured snippet, images, logo, business name, call or lead form. An architecture that names campaigns and budgets but no assets is not finished
 - One sentence: what this account is for, and what it will not do
 
 **4.4 — Competitive frame.** Who else is in the auction, from auction insights and impression share. Where impression share is lost to rank versus budget, and what that says about the offer rather than the bid. Do not raise budget where rank-lost share exceeds 50 per cent.
@@ -288,6 +290,7 @@ ID convention: `D` decisions · `R` risks · `Q` open questions · `S` scope bou
 | **Architecture is decided** | The document says what the account should be, not only what it is |
 | **Ladder rung is real** | The current bid strategy came from 2.1, not from a prior document |
 | **Measurement gap named** | The distance between bid signal and business lead is stated, even if zero |
+| **Asset set specified** | Every campaign in the architecture states its asset set against the build standard |
 | **Nothing applied** | No mutate ran with `--apply`. Any payload referenced was dry-run only |
 | **Writing standard** | Three-pass proof applied: AusE, anti-AI tells, brand hygiene |
 

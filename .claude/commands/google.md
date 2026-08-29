@@ -57,26 +57,26 @@ per-file disposition).
 
 ## Phase 4 — Grade against the build standard (what good looks like)
 
-Before reporting, grade the live account against this standard. It is brand-agnostic — the same checklist runs on the first build and the fiftieth listener pass, on any brand. It exists because a gap audit found one campaign carrying image assets, a logo, a business name and a structured snippet while the other, holding the larger budget, carried none: a build that was structurally correct and visually absent, on surfaces Google gives away for free. Findings against this standard are not a footnote — they fold into the Phase 5 report as their own ranked block.
+**Load `command-includes/_GOOGLE-ADS-BUILD-STANDARD.md` and grade the live account against
+every row.** That file is the authority and is shared with `/google-strategise`, so the
+definition of a complete campaign cannot drift between the command that specifies one and the
+command that grades one.
 
-| Check | What fails without it | How to verify |
-|---|---|---|
-| Full asset set on every enabled campaign, at every level it applies | One campaign carries image assets, a business logo, business name and a structured snippet; another, often holding the larger budget, carries none. A missing logo or image asset is not cosmetic — it is the account leaving surfaces unused that cost nothing to fill | List assets at account, campaign and ad-group level. Confirm image assets (minimum 3), a business logo (square and landscape), business name, at least 4 callouts, one structured snippet header with 3+ values, and a call or lead-form asset wherever the lane converts on a call or a form — on every enabled campaign. Presence alone is not enough; count against the minimum |
-| Minimum 6 sitelinks, verified destinations | A campaign runs 3 or 4 sitelinks against a plan of 6, or a sitelink points at a page with no real content | Count live sitelinks against the plan. Open every destination and confirm substantive content. An HTTP 200 is not proof of a working page |
-| Sitelinks match the lane, not just the count | A Canon campaign runs zero Canon sitelinks; a Sharp lane runs zero Sharp. The count target can be met while the account still fails, because none of the sitelinks say anything about what that campaign actually sells | Every sitelink on a campaign must be relevant to that campaign's own product or service lane. A lane-neutral sitelink (a shared quote form, for example) can sit on any campaign; a brand- or product-specific sitelink may only sit on the campaign for that brand or product |
-| Exact-match coverage for every head term | Without an exact-match variant living in its own lane, a head term's phrase- or broad-match in a neighbouring lane can win the auction instead, so the account bids against itself and pays its own margin away | For every head term, confirm an exact-match keyword exists in the ad group it belongs to. Pull search terms by lane and confirm each head term's clicks land in the ad group built for it, not a neighbour |
-| RSA copy carries no near-me phrasing | "Near me" assumes a walk-in visit. For a lease, service or B2B account with no retail premises, it misrepresents the offer and reads as a contextual mismatch the moment the click lands | Read every live headline and description for "near me", "nearby", or other local-visit phrasing. None may appear unless the business genuinely trades from a walk-in location |
-| Extensions match current ad copy | A claim removed from ad copy, including a factually wrong one, keeps serving in a callout or sitelink | After any ad-copy change, diff live extension text against the current copy rulings. Extensions are assets, not ads, so they carry no serving risk and get fixed first, not last |
-| Callouts add, they don't repeat | Callouts duplicate headline text, or near-duplicate each other, and waste the surface instead of extending it | No callout may repeat text already in a headline. No two callouts in the same set may be near-duplicates. Read the whole set together, not one callout at a time |
-| Extensions meet the writing standard | An extension carries an exclamation mark, or a contentless line such as "Contact and save today" | Run extension copy through the same proofing pass as ad copy, not a lighter one |
-| Non-www canonical, always | Mixed www and non-www final URLs cause a redirect hop and inconsistent tracking within the same account, and a redirect chain is its own policy and page-speed risk | Check every final URL and sitelink URL. None may use www. None may resolve through more than one redirect hop |
-| Final URL matches the lane's intent | A Canon ad sending traffic to a generic quote page, or a lease ad landing on a purchase page, breaks the promise made in the click | Open every lane's final URL and confirm the landing page answers the specific query that ad group targets, not a generic fallback |
+It covers: full asset set per enabled campaign (images, logo, business name, callouts,
+structured snippet, call or lead form), minimum 6 sitelinks with verified destinations,
+sitelinks matching the lane, no duplicate destinations in a set, both sitelink descriptions
+populated, exact-match coverage for head terms, no near-me phrasing, extensions matching
+current ad copy, callouts that add rather than repeat, structured-snippet values matching their
+header, non-www canonical, final URL matching lane intent, and full negative-list coverage on
+every campaign. It also carries the measurement traps that produce false findings.
 
-### Measurement traps that produce false findings
+Findings against this standard are not a footnote — they fold into the Phase 5 report as their
+own ranked block.
 
-- `keyword_view` folds ad-group negatives into its counts. Filter `ad_group_criterion.negative = FALSE`, or counts read roughly three times too high.
-- Negative-conflict checks must be scoped by campaign and ad group. Unscoped, a clean account reads as majority-blocked.
-- Counting `<form>` tags misses lead capture embedded in a cross-origin iframe (a GoHighLevel quiz, for example). Check for iframes and visible inputs before concluding a page has no conversion path.
+> **Do not skip this phase.** On 2026-08-28 an Axia audit ran Phases 2 and 3, chased a
+> conversion defect, and never reached Phase 4. Lane 2 was spending $237 a week with zero
+> sitelinks, no snippet, no logo and no business name, and Demand Gen was running with no
+> images or callouts at all. The checklist existed and was not executed.
 
 ## Phase 5 — Report (format-out)
 
