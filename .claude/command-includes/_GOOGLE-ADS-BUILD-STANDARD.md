@@ -37,6 +37,38 @@ checklist applies to the first build and the fiftieth listener pass, on any acco
 | Final URL matches the lane's intent | A Canon ad sending traffic to a generic quote page, or a lease ad landing on a purchase page, breaks the promise made in the click | Open every lane's final URL and confirm the landing page answers the specific query that ad group targets |
 | Every enabled campaign carries the full negative-list set | A campaign created after the shared lists exist inherits none of them | Build a coverage matrix: lists down the side, campaigns across the top. Every campaign gets every list unless there is a written reason it does not |
 
+## Asset location is campaign-type-dependent — check the right table or the check is worthless
+
+> **Why this section exists.** On 2026-08-29, in the same audit this standard was built to
+> prevent, a Demand Gen campaign was graded and reported as having **zero images, no logo, no
+> business name** — twice, in two separate passes. Both readings came from querying
+> `campaign_asset`, which is correct for a **Search** campaign's library assets but is **not
+> where Demand Gen or PMax store their creative**. The live ad in fact carried 3 marketing
+> images, 12 square marketing images, a linked logo, the business name "Axia Office Pty Ltd", 5
+> descriptions and 2 headlines — all present, none of it visible from the query that was run.
+> The gap was not a typo in one query. It was a hole in this standard: nothing in it said which
+> table to query for which campaign type, so the same wrong table got used twice and produced
+> the same false negative twice.
+
+**A "zero" or "missing" finding is not valid until the query has been matched to the campaign
+type it is being run against.** Use this table before asserting an asset is absent:
+
+| Campaign type | Where creative actually lives | Query it |
+|---|---|---|
+| **Search** | Campaign-level (and account-level) asset library, linked per campaign | `campaign_asset` — `field_type` IN (SITELINK, CALLOUT, STRUCTURED_SNIPPET, AD_IMAGE, BUSINESS_LOGO, BUSINESS_NAME, CALL), `campaign.id` in SELECT, `status = 'ENABLED'` |
+| **Demand Gen** | Directly on the ad object, not the asset library | `ad_group_ad.ad.demand_gen_multi_asset_ad.{marketing_images, square_marketing_images, logo_images, business_name, descriptions, headlines, call_to_action_text}` |
+| **Performance Max** | Asset groups, one level below the campaign | `asset_group` (id/name/status per campaign) then `asset_group_asset` (field_type/status/asset) scoped to that asset group |
+| **Video / Display** | Ad-level per format — check the specific ad type's fields (`ad.video_ad`, `ad.responsive_display_ad`, etc.) before concluding an asset is missing | Read the ad's `type` field first, then query the matching sub-object. Never assume `campaign_asset` covers it |
+
+**`BUSINESS_LOGO` and other `campaign_asset` field types are not universally valid.** Linking
+one to a campaign of the wrong type returns an `INCOMPATIBLE_CAMPAIGN_TYPE`-class error, not
+silence — treat that error as confirmation the check needs the campaign-type-specific query
+above, not as a reason to skip the campaign.
+
+**Before writing "0" or "missing" for any asset row, state which query produced it and confirm
+it is the one this table names for that campaign's actual type.** A missing value from the
+wrong table is not evidence of absence.
+
 ## Measurement traps that produce false findings
 
 - `keyword_view` folds ad-group negatives into its counts. Filter `ad_group_criterion.negative = FALSE`, or counts read roughly three times too high.
@@ -44,6 +76,7 @@ checklist applies to the first build and the fiftieth listener pass, on any acco
 - Negative-conflict checks must be scoped by campaign and ad group. Unscoped, a clean account reads as majority-blocked.
 - Counting `<form>` tags misses lead capture inside a cross-origin iframe (a GoHighLevel quiz, for example). Check for iframes and visible inputs before concluding a page has no conversion path.
 - Asset counts must be measured **per campaign**, not by summing campaign-level and account-level rows. Mixing the two makes every campaign look identically equipped.
+- **A `campaign_asset` result of zero rows is only meaningful for Search campaigns.** For Demand Gen, PMax, Video and Display, zero there means nothing — query the campaign-type-specific location above before reporting an asset as absent.
 
 ## How each command uses this file
 
