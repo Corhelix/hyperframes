@@ -78,9 +78,36 @@ wrong table is not evidence of absence.
 - Asset counts must be measured **per campaign**, not by summing campaign-level and account-level rows. Mixing the two makes every campaign look identically equipped.
 - **A `campaign_asset` result of zero rows is only meaningful for Search campaigns.** For Demand Gen, PMax, Video and Display, zero there means nothing — query the campaign-type-specific location above before reporting an asset as absent.
 
+## Never recreate an ad for a small change without asking first — it resets earned performance data
+
+> **Why this section exists.** On 2026-08-31, working an Axia Ads pass, an existing RSA rated
+> **GOOD** (Lane 1) and **EXCELLENT** (Lane 2) ad strength was paused and replaced with a newly
+> created RSA carrying the same copy, purely to pin one headline to position 1. RSA headline
+> pinning is immutable on an existing ad — confirmed live against the API, which rejected an
+> UPDATE to `ad.responsive_search_ad.headlines` with `IMMUTABLE_FIELD` — so the only way to
+> change a pin is to create a new ad and pause the old one. The new ad started at **PENDING** ad
+> strength with zero accumulated asset-performance history. This was done twice, once per lane,
+> without asking first. The user caught it: discarding a real, earned rating for an unproven one,
+> for a marginal positional gain, is a bad trade, not a small edit, and it was reverted.
+
+**Rule:** creating a new ad or asset object to make what looks like a minor change (a pin, or any
+edit that lands on an immutable field) is never a free or unilateral action. It resets ad
+strength to PENDING and discards every asset-level performance signal the paused ad had earned.
+Before creating a replacement ad for any reason:
+
+1. State the existing ad's current ad strength and that it will be discarded, by name (GOOD,
+   EXCELLENT, etc. are earned signals, not decoration).
+2. State exactly which field is immutable and forces recreation rather than an update, so the
+   trade is visible, not implied.
+3. Get an explicit go before executing. Do not proceed on the logic that a same-copy recreation
+   is low-risk — the ad strength reset is the risk, and it is real even when no text changes.
+
+An ad already rated GOOD or EXCELLENT is not touched for a marginal, speculative gain such as
+pinning. If the gain is not worth discarding the rating, do not make the change at all.
+
 ## How each command uses this file
 
 | Command | Use |
 |---|---|
-| `/google` | **Grade** the live account against every row. Findings fold into the ranked report as their own block, not a footnote |
-| `/google-strategise` | **Specify** against it. Any architecture the strategy proposes states the asset set each campaign will carry. A strategy that names campaigns and budgets but no assets is incomplete |
+| `/google` | **Grade** the live account against every row. Findings fold into the ranked report as their own block, not a footnote. Any execution step that would recreate an ad follows the ask-first rule above, no exceptions for same-copy recreations |
+| `/google-strategise` | **Specify** against it. Any architecture the strategy proposes states the asset set each campaign will carry. A strategy that names campaigns and budgets but no assets is incomplete. A recommendation that requires recreating an existing ad must name the ad strength being discarded, not just the change being made |
