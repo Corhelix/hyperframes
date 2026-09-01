@@ -96,7 +96,45 @@ Phase 3 sweep: not-run
 
 Status path: `open` to `fixed` to `retested`. A defect closes only at `retested`, with the affected acceptance checks re-run, any journey the fix touches re-walked, and the Re-run column naming them. Every row carries an evidence path — a defect nobody photographed is a rumour. Material means it fails an acceptance check, breaks a journey, or violates a non-negotiable; anything else may close as accepted risk through a `DECISIONS.md` entry. The header line flips to `Phase 3 sweep: complete (YYYY-MM-DD)` only after every dimension tester has run; the stop gate reads it.
 
+### STRATEGY.md
+
+Written in Phase 1a. One page. If it runs to two, the product is two products.
+
+```
+# STRATEGY — [project name]
+
+For:            [who, and what they are doing instead today]
+The job:        [the one thing they hire this to do]
+Defining gesture: [the action that IS this product]
+Beats [reference] on: [the named weakness, and how]
+Will not do:    [the deliberate omissions]
+Success, observable: [what a person can be watched doing when this is right]
+```
+
+### SCREENS.md
+
+Written in Phase 1b, before `JOURNEYS.md`. Sections in this order, under these names, because they are `/prd-ux`'s names and the two commands stay one vocabulary:
+
+1. Screen Inventory — every screen, grouped, each with an S-id
+2. Screen States — a row per screen: empty, loading, populated, error, edge
+3. Component Decisions — per screen: layout, primary content, navigation, actions, data display
+4. Interaction Patterns — global: form validation timing, destructive actions, loading, navigation, notifications
+5. Responsive Behaviour — per screen, what changes at each stated viewport
+6. Accessibility Notes — keyboard order, focus management, ARIA on icon-only controls, contrast
+
+```
+| ID | Screen | Reached by | Empty | Loading | Populated | Error | Edge |
+|---|---|---|---|---|---|---|---|
+| S1 | [name] | [J1 step 1] | [what shows] | [what shows] | [what shows] | [what shows] | [the awkward one] |
+```
+
+Rule: `Reached by` names a journey and a step. A screen with an empty `Reached by` is either an orphan or a missing journey, and both are found here rather than at Phase 3.
+
 ### JOURNEYS.md
+
+Authored in Phase 1b, before any code. Two levels: the index says which journeys exist, and a detail block per journey is what actually gets walked.
+
+The index, unchanged:
 
 ```
 | ID | Journey | As whom | Owner | Gestures (numbered, in order) | Final state observed | Status | Evidence |
@@ -104,7 +142,36 @@ Status path: `open` to `fixed` to `retested`. A defect closes only at `retested`
 | J1 | [what the person is trying to achieve] | [role/permissions] | [C-level identity] | 1. [gesture] 2. [gesture] … | [what proves it worked] | not-walked | — |
 ```
 
+Then one detail block per journey, below the index:
+
+```
+### J1 — [what the person is trying to achieve]
+As: [role/permissions] · Owner: [C-level identity] · Screens: S1 → S2 → S3
+
+| # | Gesture (what the person does) | What happens on screen | Success criterion (observable) | Passes forward |
+|---|---|---|---|---|
+| 1 | clicks Import in the side nav | a selector panel opens over the list | the panel is visible and its Choose file control is operable | nothing |
+| 2 | chooses a file | the filename appears beside Continue, Continue enables | the chosen filename is shown verbatim | the file, to S2 |
+| 3 | clicks Continue | the mapping screen loads | the mapping screen header shows that same filename | the file and its column list, to S3 |
+
+Final state observed: [what proves the whole journey worked]
+```
+
 Rules: a journey is a composite, and its status is independent of the features inside it — never mark it walked because its parts passed. Status values are `not-walked`, `walked`, `broken`. It becomes `walked` only when someone performed every gesture in one continuous sitting in a real browser and observed the final state, with a capture to show it. J0 is always the defining gesture.
+
+Every gesture row carries a success criterion someone could watch being true or false, never "works" and never "is correct", because a gesture with no observable criterion cannot be walked and gets ticked instead. `Passes forward` names the thing itself rather than its category: the filename, the record id, the row count. It is the column the Phase 1d data model is derived from. `nothing` is a valid value and is written, never left blank.
+
+### SHELL-WALK.md
+
+Written in Phase 1c, after the shells have been driven in a browser.
+
+```
+| ID | Journey | Shell path | Walked in browser | Broke at step | Evidence |
+|---|---|---|---|---|---|
+| J1 | [name] | shells/j1-*.html | yes/no | — or step n | evidence/shell-J1-*.png |
+```
+
+Rule: `yes` means someone drove it in a real browser and captured every step. Reading the shell source is not walking it.
 
 ### STATUS.md
 
@@ -113,9 +180,10 @@ Rewritten in full at every phase boundary, every park and every escalation. It i
 ```
 # STATUS — [project] · [ISO timestamp]
 
-Phase:      [0-4, and what is happening right now]
+Phase:      [0, 1a, 1b, 1c, 1d, 2, 3 or 4, and what is happening right now]
 Matrix:     [n] green · [n] parked · [n] failing   (of [total])
 Journeys:   [n] walked · [n] broken · [n] not-walked
+UX lock:    [not-proposed | proposed (date) | locked (date) | revised (date)]   Shells: [n] walked · [n] broken
 Defects:    [n] open · [n] fixed · [n] retested    Phase 3 sweep: [not-run|complete]
 
 In flight:  [the row or journey being worked, and its owner]
@@ -131,6 +199,7 @@ Rule: an operator reading only this file knows where the run is. If that is not 
 ```
 evidence/A{n}-{surface-or-state}-{viewport}.png     acceptance check capture
 evidence/J{n}-{step}-{what}.png                     journey step capture
+evidence/shell-J{n}-{step}-{what}.png               Phase 1c shell walk capture
 evidence/X{n}-{symptom}.png                         defect capture
 evidence/gap{n}-actual-{what}.png                   paired-audit "what it does now"
 ```
@@ -277,5 +346,26 @@ Capture each step into evidence/ as J{n}-{step}-{what}.png, and capture the fina
 Boundaries: fix nothing; touch no state file.
 Return: VERDICT walked or broken; the step it broke at if broken; the evidence paths in order; and
 one plain-words paragraph describing what the experience was actually like to perform.
+```
+
+Reused unchanged at Phase 1c against the shells: point [url] at the shell server and capture to `evidence/shell-J{n}-{step}-{what}.png`.
+
+### 7. UX lock critic (Phase 1d gate)
+
+```
+Staffed by: [the identity accountable for the product surface]. Judge as that role judges.
+You have fresh eyes and no stake in this build. Read only: [BUILD-BRIEF.md, STRATEGY.md,
+SCREENS.md, JOURNEYS.md]. Then serve and walk the shells yourself at [shell path], in a real
+browser, at [viewports]. Do not read the shells' source; click them.
+Objective: answer four questions and nothing else.
+1. Does every outcome the brief names have a journey that reaches it?
+2. Does every gesture carry a success criterion someone could watch being true or false?
+3. Does everything a gesture passes forward actually appear on the receiving screen?
+4. Does every shell sit inside the product's real header and side nav, with the current item
+   marked, rather than floating as an isolated screen?
+Boundaries: fix nothing; write no files; do not comment on visual design, wording, spacing or
+colour, because the shells are deliberately unbranded and saying so is noise.
+Return: VERDICT pass or fail. On fail, the numbered failures, each naming the journey or screen
+and which of the four questions it fails. "Pass" is a valid and welcome answer.
 ```
 
