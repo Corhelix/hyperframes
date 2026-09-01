@@ -68,6 +68,8 @@ Break into phases or milestones. Each milestone has:
 
 Keep it simple. 3-5 milestones for most tasks. If you need more than 7, the scope is too big — split into multiple SOWs.
 
+**Where the thread has screens, the UX milestones come first and no build milestone may precede them.** In this order: the screen inventory with five states per screen; the journeys written click by click, every gesture carrying an observable success criterion and the thing it passes forward to the next screen; then unbranded clickable shells sitting inside the product's real header and side nav, walked in a browser. Only after those are confirmed does a milestone exist that writes product code, and styling is a milestone of its own at the end rather than part of any build milestone. A plan that puts a screen-bearing build milestone before its journeys is a plan built on a flow nobody has seen.
+
 ### Step 5 — Output the SOW
 
 ```

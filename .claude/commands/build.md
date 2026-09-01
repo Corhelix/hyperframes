@@ -63,6 +63,18 @@ State in 3-5 lines:
 
 Get confirmation before writing code. This replaces the full SOW — it's a lightweight scope check.
 
+### Step 3a — UX first, when the task has screens
+
+**If the task touches a user-facing surface, this step is mandatory and Step 4 cannot start without it.** A task that is purely a data migration, a script or a backend contract skips it, and says in one line that it skipped it and why.
+
+Three artefacts, in this order, before a line of product code:
+
+1. **The screens.** Every screen the task touches, each with its five states: empty, loading, populated, error, edge. Each one names the journey and step that reaches it. A screen nothing reaches is an orphan, and a step with no screen means the list is short.
+2. **The journeys, written click by click,** in the words a person would use. Not "the user configures the import", but "the user clicks Import in the side nav, a selector panel opens, they choose a file, the filename appears beside Continue, they click Continue and land on the mapping screen with that filename in its header". Every gesture is numbered and carries an observable success criterion, something a person could watch being true or false, plus the thing it passes forward to the next screen, named as the thing itself rather than its category. `nothing` is a valid handoff and is written rather than left blank.
+3. **Unbranded clickable shells.** Cheapest medium that clicks: plain static HTML with one shared chrome partial, or route stubs inside the app's real layout. System font, one grey, one accent on the thing being clicked. No palette, no logo, no imagery, no spacing polish. **The chrome is lifted from the running app, never approximated:** every shell sits inside the product's real header and side nav with the current item marked, because an isolated screen floating on white proves nothing about where the gesture lives. Then drive them in a browser and walk every journey by hand.
+
+Confirm the shells with the operator, then build to them. The shells are the specification: a departure from a shell is a recorded decision with the shell updated in the same turn, never a silent improvement. Style comes last, after the behaviour works, as its own pass.
+
 ### Step 4 — Build
 
 Write the code. During implementation, check:
