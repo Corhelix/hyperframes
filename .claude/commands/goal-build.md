@@ -1,3 +1,35 @@
+---
+name: goal-build
+description: Drive a goal to completion hands-off across many steps, verifying each before the next.
+argument-hint: "[context or target]"
+disable-model-invocation: true
+
+contract:
+  writes: true
+  fires_when:
+    - a goal is driven to completion hands-off across many steps
+  does_not_fire_when:
+    - a single scoped change is wanted -> /build
+    - the goal is not yet stated as a watchable end state -> /plan
+  loads:
+    always:
+      - command-includes/_VERIFICATION-STANDARD.md
+      - command-includes/_GOAL-FIRST-CONTRACT.md
+      - command-includes/_GOAL-BUILD-TEMPLATES.md
+    skills: []   # names no skill; see _COMMAND-CONTRACT on Phase 0
+  returns:
+    - id: goal
+      is: one observable end state someone could watch happen
+    - id: shipped
+      is: what was built and the check that proves each step landed
+  acceptance:
+    - the declared always-loads appear as Read calls in the transcript
+    - every claim carries an evidence label per _VERIFICATION-STANDARD Lens 4
+  graded_by: cmo-verify
+
+includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
+---
+
 # /goal-build — Hands-Off Build to Completion
 
 <!-- DRAFT v1.0 2026-09-02 · thread: projects/command-system/tasks/2026-09-02-autonomous-build-system
@@ -369,3 +401,13 @@ Writing source before the shells walk. A shell floating without the product's re
 Editing source while a tester is in flight. Running a command version you did not bind. Parking on a credential you did not go looking for. Flipping a row green on a check you never tried to break. Editing a file you have not read. A grep result quoted as understanding. A progress claim with no tool result behind it. A placeholder presented as a feature. A test edited to green. A findings document where a change was available. Asking permission for a reversible step. Halting the whole run for one parked blocker. A defect with no evidence path. Reporting done while the defining gesture cannot be performed by hand. Surfacing a blocker you could have fixed in the same turn. Reporting a state change from a success flag without reading it back.
 
 Holding hours of work in a process that has written nothing. Committing a phase's artefact only at the end of the run. Gitignoring the deliverable. A sweep line that does not state its own scope. Hedging a status with "untested" when the honest statement is that the thing has not been exercised yet, which is a position in a build and not a fault.
+
+---
+
+## Shared blocks
+
+Declared in this command's `includes:`. Read the file when the situation arises.
+
+- `command-includes/_GATE-MECHANICS.md`
+- `command-includes/_BLOCKED-ACTION.md`
+- `command-includes/_COMMAND-CONTRACT.md` — what the block above means

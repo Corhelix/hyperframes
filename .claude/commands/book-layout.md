@@ -1,7 +1,31 @@
 ---
+name: book-layout
 description: Lay out a finished nonfiction manuscript as a printed portrait book, composing facing pages as one canvas.
 argument-hint: "[manuscript path or task folder]"
+disable-model-invocation: true
+
+contract:
+  writes: true
+  fires_when:
+    - a near-finished manuscript is laid out as printed spreads
+  does_not_fire_when:
+    - the argument is not settled -> /book-forge or /book-spine
+  loads:
+    always: []
+    skills: []   # names no skill; see _COMMAND-CONTRACT on Phase 0
+  returns:
+    - id: flat_plan
+      is: the page plan, spread by spread, with the running page count
+    - id: spreads
+      is: the laid-out spreads, composed across the gutter as one canvas
+  acceptance:
+    - the declared always-loads appear as Read calls in the transcript
+    - every claim carries an evidence label per _VERIFICATION-STANDARD Lens 4
+  graded_by: none
+
+includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 ---
+
 <!-- Source: slash-commands/book-layout.md — .claude/commands/book-layout.md must match exactly -->
 <!-- Skill: book-layout (SKILL.md + references/ + assets/) — resolution order in "The reference files are the authority"
      Pattern: the PORTRAIT sibling of /magazine. Same fixed-template discipline, same colour
@@ -252,28 +276,10 @@ still a defect.
 
 ---
 
-## GATE MECHANICS — the hooks that will deny you
+## Shared blocks
 
-Canonical text: `command-includes/_GATE-MECHANICS.md`. Summarised here so this command is
-self-contained; that file is the authority if the two disagree.
+Declared in this command's `includes:`. Read the file when the situation arises.
 
-**The session markers.** `.entity-loaded` (or `no-entity`) and `.skills-approved` gate every
-Write and Edit. The skills proof is checked for content: the frame needs eight distinct
-words, at least one proposed skill must resolve against `skills-catalogue.json`, and if this
-session invoked skills the proposal must name one of them.
-
-**File home, enforced on writes.** `clean-path-gate.py` allows only
-`~/Documents/CLEAN/<repo>/<path>`, and the first segment must be a real repo.
-
-**Tool discipline, enforced on Bash.** `block-bash-fileops.py` denies `cat`, `head`, `tail`,
-`grep` and `find` in every pipeline position. Use Read, Grep and Glob.
-
-Working around a gate rather than satisfying it is the drift the gates exist to catch.
-
-## When something is blocked: present a form, do not halt
-
-Every blocked action needing operator authorisation is presented as a structured approval
-question — never as prose asking them to go and run something. State the one decision, what
-was tried and why it failed, the blast radius, genuinely different options each with its
-consequence, and a recommendation. Then keep working on whatever does not depend on the
-answer.
+- `command-includes/_GATE-MECHANICS.md`
+- `command-includes/_BLOCKED-ACTION.md`
+- `command-includes/_COMMAND-CONTRACT.md` — what the block above means

@@ -1,7 +1,48 @@
 ---
+name: cmo
 description: Run the CMO workflow: load entity context and ICP, frame the strategy, then write on-brand copy.
 argument-hint: "[context or target]"
+disable-model-invocation: true
+
+contract:
+  writes: true
+  fires_when:
+    - copy, positioning, messaging or a brand deliverable is the output
+    - an entity or client brand is named and the work is customer-facing
+  does_not_fire_when:
+    - software is being built -> /cto
+    - existing copy is audited without producing new work -> /audit-cmo
+    - the full multi-viewport chain is wanted -> /prd-discovery
+  loads:
+    always:
+      - viewports/cmo.md
+      - command-includes/_VERIFICATION-STANDARD.md
+      - skills/digital-marketing/creative-toolkit.md
+      - knowledge-bank/marketing-and-gtm.md
+      - knowledge-bank/strategy-foundations.md
+      - skills/digital-marketing/product-marketing-context/SKILL.md
+      - skills/digital-marketing/marketing-psychology/SKILL.md
+      - skills/digital-marketing/conversion-copywriting/SKILL.md
+      - skills/copywriting/Proofread-Anti-AI-Standard.md
+  returns:
+    - id: framing
+      is: 1.5 tables complete, ICP problem positioning task guardrails
+    - id: six_points
+      is: 3.1 to 3.6 complete, switching dynamics mapped to named sections
+    - id: copy
+      is: the asset, in the brand voice, with the strategic intent stated
+    - id: verdict
+      is: cmo-verify PASS, or the must_fix list cleared and re-run
+  acceptance:
+    - the declared always-loads appear as Read calls in the transcript
+    - no proven line is paraphrased, and none is inserted to meet a quota
+    - no claim is unlabelled under Lens 4
+    - cmo-verify returns PASS before delivery
+  graded_by: cmo-verify
+
+includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 ---
+
 <!-- slash-commands/cmo.md is canonical; .claude/commands/cmo.md must match exactly -->
 # /cmo — CMO composite workflow
 
@@ -484,6 +525,14 @@ Don't run a checklist. Read the copy cold.
 
 If something fails, fix it. You're the CMO.
 
+### Step 5.1a — Claim check (Lens 4)
+
+Canonical text: `command-includes/_VERIFICATION-STANDARD.md`, Lens 4. Every non-trivial
+claim in the deliverable carries one of five labels in the sentence: verified,
+documented but unverified, missing, stale, conflicting. An artefact that is mostly
+unverified is an opinion piece and says so at the top. A coverage fraction is not
+comprehension and is banned as evidence.
+
 ### Step 5.1b — Adversarial verify (independent check)
 
 Spawn the `cmo-verify` agent (`agentType: "cmo-verify"`, read-only) with `deliverable_path`, `brief_path` (the committed `job-ad-source.md` / brief), and `evidence_path` (the entity's fact/evidence file). It returns a PASS/FAIL verdict — fabrication sweep, criterion coverage, positioning integrity, writing proof.
@@ -563,88 +612,11 @@ When in doubt, read `templates/README.md` and pick from the table there.
 
 ---
 
-## GATE MECHANICS — the hooks that will deny you
+## Shared blocks
 
-**Arm the frame gate in Phase 1, before any analysis.** `frame-gate-v1.sh` is
-inert without `.frame-required`, so skipping this does not run the command
-ungated by design — it runs it ungated by accident.
+Declared in this command's `includes:`. Read the file when the situation arises;
+the text is not carried here.
 
-```bash
-echo '{"kind":"<system|entity>","target":"<target>"}' > "<session-marker-dir>/.frame-required"
-```
-
-Release it only when the analysis is genuinely complete, both fields true:
-
-```bash
-echo '{"kind":"<system|entity>","target":"<target>","framing_locked":true,"all_six_complete":true,"as_of":"YYYY-MM-DD"}' > "<session-marker-dir>/.frame-locked"
-```
-
-Canonical text: `command-includes/_GATE-MECHANICS.md`. Summarised here so this
-command is self-contained; that file is the authority if the two ever disagree.
-
-**The session markers.** `.entity-loaded` (or `no-entity` for platform work) and
-`.skills-approved` gate every Write and Edit via `skills-gate-v2.sh`. Since v2.4
-the skills proof is checked for content, not length: the frame needs eight
-distinct words, at least one proposed skill must resolve against
-`skills-catalogue.json`, and if this session invoked skills the proposal must name
-one of them. Legacy `.claude/.entity-loaded` and `.claude/.skills-approved` paths
-are ignored.
-
-**Load order, enforced on reads.** `command-load-order-gate.py` arms off the
-operator's typed prompt, not off anything the model does. A denied Read is the
-gate working, not a tooling failure.
-
-**File home, enforced on writes.** `clean-path-gate.py` allows only
-`~/Documents/CLEAN/<repo>/<path>`, and the first segment must be a real repo — in
-`repo-map.json` or present on disk with a `.git`.
-
-**Tool discipline, enforced on Bash.** `block-bash-fileops.py` denies `cat`,
-`head`, `tail`, `grep` and `find` in every pipeline position, including
-`/usr/bin/grep`, `\grep`, `env grep`, `xargs grep` and `bash -c "cat ..."`. Use
-Read, Grep and Glob. Bound payload with Read's `offset`/`limit` or Grep's
-`head_limit`. If the dedicated tool is absent from the session, `git grep` and
-`python3` are allowed and are not bypasses.
-
-Working around a gate rather than satisfying it is the drift the gates exist to
-catch, and it is caught in audit.
-
-## When something is blocked: present a form, do not halt
-
-A denial that arrives as a paragraph of instructions is homework. The operator has
-to read the prose, work out what the decision actually is, and then run commands by
-hand. That is the failure mode, not the block itself.
-
-**Every blocked action that needs operator authorisation is presented as a
-structured approval question — AskUserQuestion — never as prose asking them to go
-and run something.**
-
-Distinguish the two cases first, because they need opposite responses.
-
-**A gate blocking work it should not** is a defect. Do not ask for approval to work
-around it. Fix the gate, or report it as a defect with the reproduction. Examples
-from 2026-08-16: the skills gate denying the write that satisfied it; a proposal
-denied for naming skills the session had not invoked; a catalogue blind to
-project-level skills. None of those warranted an approval prompt. They warranted a
-fix.
-
-**A guard blocking work it should** is not a defect. `gh secret set` writing
-credentials, `apply_migration` running DDL against a shared production database,
-anything destructive or outward-facing. Never route around these, and never ask for
-a standing allow-rule when a single decision is what is needed.
-
-For the second case, the response is a form with:
-
-  - the one decision, stated as a question the operator can answer without reading
-    the transcript
-  - what was already tried and why it failed, in one line each — a blocked action
-    reported without the routes attempted is a ghost blocker
-  - the blast radius, named. Shared database, live credentials, how many repos
-  - options that are genuinely different, each with its consequence, and a
-    recommendation. An options menu with no recommendation is banned by the
-    goal-first contract and that applies here
-  - what happens to the rest of the work either way. If other items are unblocked,
-    say you are proceeding with those, then proceed
-
-Then keep working on whatever does not depend on the answer. A session that halts
-entirely on one blocked item, when six others are unblocked, has turned one
-permission decision into a stopped thread.
+- `command-includes/_GATE-MECHANICS.md` — the hooks that will deny you
+- `command-includes/_BLOCKED-ACTION.md` — what to do when one does
+- `command-includes/_COMMAND-CONTRACT.md` — what the block above means
