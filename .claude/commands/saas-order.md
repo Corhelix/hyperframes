@@ -1,3 +1,29 @@
+---
+name: saas-order
+description: Assemble a SaaS order or commercial package, with inclusions, exclusions and triggers.
+argument-hint: "[context or target]"
+disable-model-invocation: true
+
+contract:
+  writes: true
+  fires_when:
+    - a SaaS order or commercial package is assembled
+  does_not_fire_when:
+    - the technical design is the question -> /cto
+  loads:
+    always: []
+    skills: []   # names no skill; see _COMMAND-CONTRACT on Phase 0
+  returns:
+    - id: order
+      is: the package, its inclusions and exclusions, and what triggers each
+  acceptance:
+    - the declared always-loads appear as Read calls in the transcript
+    - every claim carries an evidence label per _VERIFICATION-STANDARD Lens 4
+  graded_by: none
+
+includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
+---
+
 # /saas-order — Brand and idea in, buildable SaaS Build Order out
 
 <!-- DRAFT v1.0 2026-09-02 · thread: projects/command-system/tasks/2026-09-02-autonomous-build-system
@@ -210,3 +236,13 @@ Reformatting a brief and calling it an order. Filling an Unknown with a default 
 A job written as a feature. A defining gesture with a conjunction in it. An empty no-go list. An appetite left unstated because the operator was reluctant to state one. Describing an existing design system rather than naming its path. Naming a deliverable without checking it is not gitignored.
 
 Presenting the human gate as a document review when the decision is go or kill. Letting the order diverge from the journeys after Phase 1d without correcting it.
+
+---
+
+## Shared blocks
+
+Declared in this command's `includes:`. Read the file when the situation arises.
+
+- `command-includes/_GATE-MECHANICS.md`
+- `command-includes/_BLOCKED-ACTION.md`
+- `command-includes/_COMMAND-CONTRACT.md` — what the block above means
