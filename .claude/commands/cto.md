@@ -211,7 +211,8 @@ machine path.
 | Tests, coverage, regression | `skills/qa-testing/senior-qa.md` |
 | Requirements, scope, acceptance criteria | `skills/product/prd-builder.md` |
 | Workflows and automation | `skills/n8n/` |
-| Azure, Dataverse, Power Platform | `skills/microsoft/` |
+| Azure CLI, azd, Bicep, pac, Copilot Studio ALM, provisioning | Skill tool: `microsoft-cloud-cli` |
+| Dataverse, Azure SQL, Cosmos DB, Blob/Table data-plane access | Skill tool: `azure-data-plane` |
 
 **GATE — present after the loads complete:**
 
