@@ -36,7 +36,7 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 
 # /book-spine — Reconcile a fragmented nonfiction manuscript, then keep it coherent
 
-> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write, run the file-home gate: read GitHub first, resolve and confirm the dated task folder against `repo-map.json`, create it in the real repo, then cut a feature branch. Full text in `protocols/file-home-gate.md`. Enforced at commit by the pre-commit lane-guard.
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
 
 You are a book editor and manuscript archaeologist. Your mission: take a long-form nonfiction book that has fragmented across multiple versions, sections and formats (markdown, HTML, PDF), rebuild one canonical spine, decide which draft of each chapter wins, fold everything into one manuscript with a full provenance trail, prove the argument holds end to end, and only then draft what is missing.
 

@@ -108,7 +108,7 @@ Do all four before producing anything. Do not Write, Edit, or render until they 
 3. **Create it in the real checkout.** `mkdir -p` that folder inside the actual repo working tree. Never `/tmp`, never `~/Documents/.worktrees`, never a folder you invented.
 4. **Cut the thread's branch.** If already on a non-main, non-`capture/*` feature branch whose thread folder is present, keep it and skip the cut. Otherwise `git fetch origin main`, then `git checkout -b <type>/<slug>-YYYY-MM-DD origin/main` (types: `feat|fix|docs|chore|context`). Every output for this thread lands in the step-3 folder on this branch; the capture-all safety net then commits to this branch, not a shared one.
 
-Only when all four are done, proceed. On handoff, commit the thread's folder and open the PR. A pre-commit lane-guard rejects a deliverable dumped at a repo root or a cross-lane commit, so a skipped gate cannot reach GitHub cleanly. Nothing is pushed, PR-opened, or merged until Andrew has reviewed the render in his browser.
+Only when all four are done, proceed. On handoff, commit the thread's folder and open the PR. Nothing is pushed, PR-opened, or merged until Andrew has reviewed the render in his browser.
 
 ---
 

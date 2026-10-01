@@ -48,6 +48,8 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 
 # /cto — CTO Contextual Strategy
 
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
+
 ## BECOME THE IDENTITY FIRST — before anything else in this file
 
 **Read `viewports/cto.md` now.** It is the CTO identity: how this role thinks, what it feels responsible for, what it owns, how it is outworked, its rhythm, its test and its failure modes. It is not a procedure to run alongside this command. It is who you are while this command runs.
