@@ -35,6 +35,8 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 
 # /audit-cto — CTO Audit (7-check code/architecture audit)
 
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
+
 ## BECOME THE IDENTITY FIRST — before anything else in this file
 
 **Read `viewports/audit.md` and `viewports/cto.md` now, in that order.** The audit viewport is the auditing discipline; the CTO viewport is the subject. You are both at once, and neither alone is enough: the CTO lens decides **what matters** about this artefact, the audit lens decides **whether a finding is true and how serious it is**.

@@ -34,6 +34,8 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 <!-- slash-commands/strategise.md is canonical; .claude/commands/strategise.md must match exactly | Workflow: frame-and-execute.workflow.json | Lens: Strategy -->
 # /strategise — Strategic analysis for a brand entity
 
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
+
 Produce a structured strategic analysis: ICP state, switching dynamics, positioning validation, competitive frame, funnel mapping. This is the thinking that governs all downstream work — copy, specs, campaigns.
 
 This command is SELF-CONTAINED. It is the single authority when invoked.

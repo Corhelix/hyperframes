@@ -46,6 +46,8 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 <!-- slash-commands/cmo.md is canonical; .claude/commands/cmo.md must match exactly -->
 # /cmo — CMO composite workflow
 
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
+
 ## BECOME THE IDENTITY FIRST — before anything else in this file
 
 **Read `viewports/cmo.md` now.** It is the CMO identity: how this role thinks, what it feels responsible for, what it owns, and how it is outworked. It is not a procedure to run alongside this command. It is who you are while this command runs.
@@ -63,21 +65,6 @@ You do not open the entity files and then reach for a lens. The identity decides
 You ARE the person accountable for whether this copy converts, whether the positioning holds, whether the ICP feels seen. Every word you write is a strategic decision you own.
 
 > **Changed 2026-08-18.** This block previously read "This command is SELF-CONTAINED. Do not also load the CMO viewport — their critical steps are incorporated below." That was audited and was not true. Five viewport elements were missing outright, including *Push acknowledged before Pull*, the skill-governance trace, the audit pass table and the failure-mode mapping. More importantly the claim was wrong in kind: the viewport carries the CMO identity, and a command cannot incorporate an identity as a set of steps. The identity is loaded, not inlined.
-
----
-
-## STEP 0: FILE-HOME GATE (MANDATORY, before any Write, Edit, or render)
-
-No output is written until this thread has a home in the CLEAN mirror. One permitted location, defined once in `protocols/filing-law.md`; everything else is a third location and is denied. Positive routing, not clean-up after.
-
-Do all four before producing anything. Do not Write, Edit, or render until they are done.
-
-1. **GitHub first.** Resolve current state and any referenced files from GitHub (`gh api`), not the local clone. Local is trusted only after it matches HEAD; on any conflict, GitHub wins, so pull fresh.
-2. **Resolve and confirm the home.** From the client / entity / task, resolve the owning repo and area from `protocols/repo-map.json` (the one lookup). Propose the dated, terminology-rich folder (`<repo>/<area>/tasks/YYYY-MM-DD-<slug>/`) and get a one-line confirm. Confirmed, never assumed.
-3. **Create it in the CLEAN mirror.** `mkdir -p` that folder inside `~/Documents/CLEAN/<repo>/`. `protocols/filing-law.md` is the single authority on destinations and this command states none of its own.
-4. **Do not cut a local branch.** Never run `git checkout`, `branch`, `commit` or `worktree`. Local `HEAD` stays on `main`. The branch and PR are created on GitHub by `scripts/publish-thread.sh` the moment the first artefact exists, so concurrent sessions cannot collide and nothing can be stranded on one disk.
-
-Only when all four are done, proceed. Publish the moment an artefact exists; the review gate is on **merge**, not on push. `hooks/clean-path-gate.py` denies any write outside the mirror, so a skipped gate cannot reach disk. Nothing is merged until Andrew has reviewed the render in his browser.
 
 ---
 

@@ -65,17 +65,22 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 
      Phase 3 KEEPS its number, and the reason first recorded here was WRONG.
 
-     CORRECTED 2026-09-02, same day, by audit 12. `goal-build-stop-gate.py` IS NOT WIRED TO
-     ANYTHING. It exists as code in three places — this repo's `hooks/`, the archived global
-     config at `claude-system/global/hooks/`, and the 2026-08-20 task folder — and is registered
-     in ZERO hook events. This repo's `.claude/settings.json` declares no `Stop` event at all.
-     The machine's global config does declare one, running five other scripts; the goal-build
-     gate is not among them. `phase-completion-gate.py` is in the same state.
+     CORRECTED 2026-09-02, by audit 12: `goal-build-stop-gate.py` was registered in ZERO hook
+     events, so every claim that it "refuses to end the session while any FEATURE-MATRIX row is
+     failing" was false — in v0.9's text, in this file's first draft, and in capital-works'
+     STATUS.md, which reported it "doing its job". Nothing matched the literal.
 
-     So every claim that the stop gate "refuses to end the session while any FEATURE-MATRIX row
-     is failing" is false — in v0.9's text, in this file's first draft, and in capital-works'
-     STATUS.md, which reported it "doing its job". Nothing matched the literal. Nothing stopped
-     anything.
+     RE-CORRECTED 2026-10-01, and this reverses the above. The gate IS wired now. Verified live:
+     `~/.claude/settings.json` registers `Stop` -> `python3 ~/.claude/hooks/goal-build-stop-gate.py`
+     with an empty matcher, so it fires on every stop, and `claude-system/global/settings.hooks.json`
+     registers it too. The script blocks unless DEFECTS.md carries a line starting
+     `phase 3 sweep: complete`. Two in-flight runs read `Phase 3 sweep: not-run` and cannot close
+     until that line is written. Treat the gate as real. `goal-build-scope-gate.py` is registered in
+     `~/.claude/settings.json` only and is absent from the global file, so a fresh machine gets the
+     script with no registration; `phase-completion-gate.py` is registered in both.
+
+     The lesson of the 2026-09-02 entry survives its own reversal: a correction goes stale exactly
+     as fast as the claim it corrected, so verify the registration rather than reading either.
 
      This is contract 3b broken by the author of contract 3b: a constraint the system does not
      have, inherited unchecked from v0.9's prose, and then DEFENDED — the phase numbering was
@@ -255,6 +260,30 @@ The commit boundary is the survival boundary. Work that exists only in a running
 
 **Phase 0 — Frame.** Restate the mission as an observable end state. Resolve the owning repo before writing anything, and satisfy the session gates now so no hook stalls the run mid-flight. Create a fresh branch off `origin/main`; write the build lock. Fill unfilled slots with assumed defaults. Name the C-level identities this build needs and resolve each; if one will not resolve, stop rather than run unstaffed. Write `BUILD-BRIEF.md`, including the sanity command every resume will run, and open `STATUS.md`.
 
+**Declare `surface_kind` per journey, and it governs 1b, 1c and 1e.** *(new 2026-10-01)*
+
+Until today those three phases assumed a screen, and Lens 2 was the only place that admitted a
+build might not have one. Two runs in the same thread showed why that is not enough: one emitted a
+review email a person presses a button in, the other emitted prompt slots consumed by an engine.
+Both reported as "screenless" and neither phase set fitted. The first spent effort on shells it
+half-needed; the second wrote 13 `passes forward` values whose receivers were slots `S01`-`S10`
+while `SCREENS.md` defined `SC1`-`SC3`, so every honest row failed the 1b gate.
+
+| `surface_kind` | 1b writes | 1c builds, then walks | 1e |
+|---|---|---|---|
+| `screen` | `SCREENS.md`, five states per screen | clickable HTML shells, driven in a real browser at the stated viewports, an image per gesture | tokens lifted from the running app |
+| `surface` — email, PDF, printed page, chat message, anything a person reads outside the app | the artefact's states: received, empty, one item, a very long value, failed | a static mock of the artefact, walked **in its real client** — Outlook, a mail client, a PDF viewer — an image per gesture | the artefact's own constraints: email-safe CSS, print CSS, the client's limits |
+| `contract` — API, prompt slot, queue message, database row | the boundary's shape, what crosses it, and its failure modes | a **fixture pack**: worked input to expected output, reviewed by a person before the code exists | not applicable, recorded as such |
+
+**The rule that stops this becoming an escape hatch.** Every `contract` journey must terminate in a
+`screen` or `surface` journey that a person actually walks. A run whose journeys are all `contract`
+has no user, so Lens 3 cannot run and the build cannot close. At least one journey in the run
+carries a `surface_kind` other than `contract`, and the 1b gate asserts it.
+
+The declaration is a `DECISIONS.md` entry with its reason, made at Phase 0 and never mid-build.
+`surface` and `contract` change where the evidence comes from. They never reduce how much of it
+there is, and they never excuse a journey from being walked by hand.
+
 **Bind your own version first.** Record which command you are running: path, version token, first eight characters of its SHA-256. If an installed canonical copy exists and differs, stop and say so. A run against a superseded draft tests nothing.
 
 **Resolve your inputs before you use them.** A path is a claim. Open the brief from the directory you are actually in and record that it resolved. Then resolve every path the brief names and record which opened.
@@ -278,11 +307,15 @@ J0 is the defining gesture and is written first. Cover at minimum: first use thr
 **This phase is gated, and the gate is machine-checkable.** 1b cannot close while either is true:
 
 1. **Any gesture lacks an observable success criterion.** Grep the criterion column for empties, and for the words "works", "is correct", "successfully".
-2. **Any gesture passes something forward that the receiving screen does not display.** For each non-`nothing` value, the receiving screen's row in `SCREENS.md` must mention it.
+2. **Any gesture passes something forward that the receiving surface does not display.** For each non-`nothing` value, the receiving row in `SCREENS.md` must mention it. The receiving row is a screen under `surface_kind: screen`, the emitted artefact under `surface`, and the named boundary plus the fixture that exercises it under `contract` — the check is the same, the thing it resolves against is whatever that journey declared.
+
+3. **Every journey in the run is `contract`.** There is then no user and no journey to walk, so the run has no Lens 3 and cannot close.
 
 Both are scripts. Commit them to `harness/`. This is the stage that got skipped in the run that produced this command, and it was skipped because nothing checked it — not because it was hard.
 
 **Phase 1c — Shells, unbranded and clickable.** Build the journeys as something a person can click, before any of it is real. Cheapest medium that clicks wins: plain static HTML with one shared chrome partial, unless the app already runs a framework, in which case route stubs inside its real layout. No build step, no component library, no state library. One file per screen. If `shells/` is bigger than one feature's source, you are building the product instead of the shell.
+
+Under `surface_kind: surface` the shell is a static mock of the emitted artefact and the walk happens in that artefact's real client, not a browser — a card in Outlook is pressed in Outlook. Under `contract` there is no shell; the deliverable is the fixture pack, and it is reviewed by a person before any code exists. Both still produce an image per gesture. Neither is a reason to skip the walk.
 
 Unbranded means unbranded: system font, one grey for structure, one accent on the thing being clicked, boxes with labels in them.
 
@@ -307,6 +340,8 @@ Record `UX-LOCK: locked (date)` in `DECISIONS.md`.
 **Phase 1e — The design system foundation.** *(new in v1.0)*
 
 Tokens, component primitives, state vocabulary and accessibility semantics, written to `DESIGN-SYSTEM.md` before the build starts. This is foundation, not decoration, and it is not the same thing as visual polish.
+
+Under `surface_kind: surface` the design system is the artefact's own constraint set — email-safe CSS, print CSS, whatever the client enforces — written to `DESIGN-SYSTEM.md` like any other. Under `contract` it is not applicable, and that is recorded in `DESIGN-SYSTEM.md` as one line naming the reason, never left absent. An absent file and a deliberate exemption must not look the same to the next session.
 
 **Where a design system already exists, adopt it; do not invent a second one.** Read the running app's stylesheet and take its token values verbatim. Where the project names a kit or template, that is the source. Inventing a parallel visual language is the most repeated failure in this system's history, and it has cost a full session more than once. Every token traces to a named source; anything that cannot trace is deleted rather than defended.
 

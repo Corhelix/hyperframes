@@ -37,6 +37,8 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 <!-- slash-commands/audit-cmo.md is canonical; .claude/commands/audit-cmo.md must match exactly -->
 # /audit-cmo — Audit copy against entity brand and ICP standards
 
+> **STEP 0: FILE-HOME GATE (mandatory).** Before any Write: `git fetch origin`, then confirm the target folder is canonical on GitHub with `git ls-tree -r --name-only origin/main <path>`. If it is not there, STOP and confirm the location with Andrew; a folder on local disk proves nothing. **Local `HEAD` stays on `main`:** never run `git checkout`, `branch`, `stash`, `commit` or `worktree`. The branch and the commit are created on GitHub, by API or by local plumbing against a temporary `GIT_INDEX_FILE`, so the working tree is never touched. Never reuse a branch whose PR has merged or stalled; if a PR is already open against that folder, resolve it first. Full text in `protocols/file-home-gate.md`.
+
 ## BECOME THE IDENTITY FIRST — before anything else in this file
 
 **Read `viewports/audit.md` and `viewports/cmo.md` now, in that order.** The audit viewport is the auditing discipline; the CMO viewport is the subject. You are both at once, and neither alone is enough: the CMO lens decides **what matters** about this artefact, the audit lens decides **whether a finding is true and how serious it is**.
@@ -72,7 +74,11 @@ This command is SELF-CONTAINED. It is the single authority when invoked.
 
 ## Canonical output scaffold (MANDATED)
 
-Audit reports are decision-bearing — every finding becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout — copy from the canonical and fill placeholders.
+**Always start the HTML output from `../alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html`.** Never hand-write the brand CSS or invent a layout. Copy from the canonical and fill placeholders.
+
+> **Corrected 2026-09-07.** This section previously mandated `HTML-DECISION-TAGGING-PATTERN.html` and a LOCK / REVISE / DROP / DEFER register on every audit. That contradicts the current rule in `CLAUDE.md` § Output Conventions, which retires decision registers for reports and audits: *an audit reports what is true against a standard that is already settled, so a breach of locked positioning is a defect, not a choice, and there is nothing to stamp.* The register template is retained only for genuine change-management surfaces where the reader must pick between open options.
+
+**No decision register on an audit.** Where a document genuinely carries open decisions the reader must choose between, state them in prose, list them, and let the notes box carry the answer. A **fix checklist** with tick boxes is still correct where each row is a unit of work tracked through to done, because "have I done this yet" is real state.
 
 ID convention: `F1`, `F2`, ... for findings (`F` for finding); `G1`, `G2`, ... for verified-sound checks (`G` for green).
 
@@ -106,7 +112,7 @@ If any apply → go back. Read `protocols/anti-drift.md`.
 
 Perform the marker actions below because the work needs them, not because a hook will stop you. Arm it for a decision-bearing audit so the report cannot ship from a skim.
 
-After the framing + 3.1-3.6 standard is written (Phase 1.6): save it to `<task-dir>/framing-<YYYY-MM-DD>.md`; commit the audited asset/source into the task folder (`brief-<date>.md`, or the asset itself); write `.claude/.cmo-active.json` = `{"workflow":"cmo","slug":"<slug>","task_dir":"<absolute task dir>","gates_confirmed":false}`; `touch .claude/.skills-approved` after Phase 3; set `gates_confirmed:true` once the user confirms the context checkpoint; delete both markers when done. The gate then blocks the report write until the source, the framing (all six points), and confirmation exist. Full reference: `protocols/gate-enforcement.md`.
+After the framing + 3.1-3.6 standard is written (Phase 1.6): save it to `<task-dir>/framing-<YYYY-MM-DD>.md`; commit the audited asset/source into the task folder (`brief-<date>.md`, or the asset itself); write `.claude/.cmo-active.json` = `{"workflow":"cmo","slug":"<slug>","task_dir":"<absolute task dir>","gates_confirmed":false}`; `touch .claude/.skills-approved` after Phase 3; set `gates_confirmed:true` once the user confirms the context checkpoint; delete both markers when done. The gate then blocks the report write until the source, the framing (all six points), and confirmation exist. Full reference: `command-includes/_GATE-MECHANICS.md`.
 
 **CHECKPOINT caveat:** if the transcript is unreadable at the moment of the check, the gate degrades to the self-set `gates_confirmed` flag alone — never harder than the pre-hook behaviour, but not the non-fabricable guarantee either. Do not treat CHECKPOINT as unconditionally human-proof in that edge case.
 
@@ -406,9 +412,9 @@ Read the copy. For each check, cite specific lines or sections.
 | 6 | **Writing standard (3-pass proof)** | Pass 1 AusE — `-ise/-our/-re/-yse/-ogue`, double-l, programme/practise/licence. Pass 2 anti-AI — em-dash misuse, stock vocab, false balance, tricolons, generic openers/closers. Pass 3 brand hygiene — emojis, sales-negative, invented frameworks. Three or more patterns in one section = full rewrite, not find-and-replace. | PASS / FAIL |
 | 7 | **Strategic coherence** | Every section serves a clear strategic intent? Nothing is filler? Tactics trace to strategy? | PASS / FAIL |
 
-### Step 4.2 — Produce the HTML decision-register report
+### Step 4.2 — Produce the HTML findings report
 
-Open `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html` and stamp it with:
+Open `alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html` and fill it with:
 
 - **Header:** `AUDIT REPORT: [asset]` | Entity: [name] | Type: Copy | Date: YYYY-MM-DD | Author: CMO
 - **Summary module:** `[X / 7 checks passed] — [PASS / NEEDS WORK / FAIL]`
@@ -418,7 +424,7 @@ Open `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html` and stam
   - Evidence (quoted problematic text)
   - Fix (specific — not "improve this" but exactly what to change)
   - Severity (Critical / Major / Minor)
-  - Decision register row: LOCK / REVISE / DROP / DEFER (Andrew stamps)
+  - No stamping row. The finding either stands or it does not.
 - **Verified-sound section:** one card per PASS, ID `G1`, `G2`, ... One-line confirmation each
 - **Priority Fixes module:** top 3 critical issues, ranked
 - **Archive section:** for findings that get DROPPED or DEFERRED across review rounds
@@ -468,11 +474,11 @@ Each becomes a row in the register like any other finding.
 
 ## Output format — template selection
 
-The audit's primary scaffold is mandated above: `HTML-DECISION-TAGGING-PATTERN.html`. Audits are always decision-bearing. The full selection rule is the authority at `alc-group/brand-ops/templates/README.md`. The quick decision tree below covers when `/audit-cmo` would reach for a different template (rare — usually only when chaining into a fix in the same delivery):
+The audit's primary scaffold is mandated above: `CLARITY-OS-REPORT-TEMPLATE.html`. The full selection rule is the authority at `alc-group/brand-ops/templates/README.md`. The quick decision tree below covers when `/audit-cmo` would reach for a different template (rare — usually only when chaining into a fix in the same delivery):
 
 | You're producing | Use this template |
 |---|---|
-| Audit findings to stamp (LOCK / REVISE / DROP / DEFER) — the audit's primary output | `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html` |
+| Audit findings — the audit's primary output. No register. | `alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html` |
 | Side-by-side comparison alongside the audit (current copy vs proposed rewrite, each edit gets its own LOCK / REVISE / DROP / DEFER row) | `alc-group/brand-ops/templates/EDITS-COMPARISON-TEMPLATE.html` |
 | The corrected copy itself (delivered as a sibling artefact after the audit) | Branded entity template — `CLARITY-OS-TEMPLATE.html` (internal) / `WE-MARKETING-TEMPLATE.html` (W&E) / other per `templates/README.md` |
 | Presented audit findings **narrative** to read, present or print (not the stamping surface) | `protocols/templates/LANDSCAPE-MODULE-TEMPLATE.html` — **Landscape Module Doctrine** (1920×1080 modules → native Print → Save as PDF) |
