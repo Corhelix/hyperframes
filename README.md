@@ -1,3 +1,17 @@
+<!-- clarity-os-pointer:start · managed in claude-system global/repo-pointer, edit there -->
+## Read this first: CLARITY OS is the record
+
+The canonical record for every ALC product, and for this repo's place in it, is the Estate in CLARITY OS.
+
+- Estate: https://clarity-os-app-orcin.vercel.app/estate
+- This repo: https://clarity-os-app-orcin.vercel.app/estate/r/hyperframes
+- Record file: Corhelix/clarity-os-app `src/features/estate/data/estate.json` (products, repos, rulings)
+- Docs and ADRs: Corhelix/clarity-os-docs
+- Entities and brands: Corhelix/alc-group
+
+Where this file disagrees with the Estate, the Estate wins.
+<!-- clarity-os-pointer:end -->
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/logo/dark.svg">
