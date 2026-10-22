@@ -66,9 +66,13 @@ gate and stop. Emergency escape hatch: `CLARITY_LOAD_ORDER_GATE=off`.
 
 ## File home, enforced on writes
 
-`clean-path-gate.py` enforces `github.com/Corhelix/<repo>/<path>` ==
-`~/Documents/CLEAN/<repo>/<path>`. There is no third location: worktrees, `-wt`
-directories, the session scratchpad, `/tmp` and the Desktop are all denied.
+Files are created on GitHub in the task's fresh branch and PR (`protocols/how-we-work.md`).
+`clean-path-gate.py` still denies any local write outside `~/Documents/CLEAN/<repo>/<path>`,
+the view-copy location. There is no third location: worktrees, `-wt` directories, the
+session scratchpad, `/tmp` and the Desktop are all denied.
+
+`alc-group/...` and `client-projects/...` paths in any command are GitHub repo paths. Read
+them from `origin/main` with `gh api`, never from a local sibling folder.
 
 Since 2026-08-14 the first path segment must also be a **real repo** — named in
 `protocols/repo-map.json` or present on disk with a `.git`. An invented directory

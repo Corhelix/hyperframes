@@ -86,7 +86,7 @@ Requires PRD-1-DISCOVERY.md and PRD-2-UX.md from previous stages.
 
 ## Canonical output scaffold (MANDATED)
 
-PRDs are dense with decisions — architecture choices, data model decisions, risk acceptances, milestones, acceptance criteria. Every one becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout — copy from the canonical and fill placeholders. ID convention: `D` decisions · `R` risks · `M` milestones · `T` tasks · `S` schema/sections · `Q` open questions.
+PRDs are dense with decisions — architecture choices, data model decisions, risk acceptances, milestones, acceptance criteria. Every one becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout — copy from the canonical and fill placeholders. ID convention: `D` decisions · `R` risks · `M` milestones · `T` tasks · `S` schema/sections · `Q` open questions.
 
 If the canonical is missing, STOP and ask. See `alc-group/brand-ops/templates/README.md` for selection rules.
 

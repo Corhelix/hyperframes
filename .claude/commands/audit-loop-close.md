@@ -56,7 +56,7 @@ If PICKUP mode is detected but no prior HTML is found at `projects/system-archit
 
 ## Canonical output scaffold (MANDATED)
 
-Decision-bearing — every recommendation becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Start the HTML from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
+Decision-bearing — every recommendation becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Start the HTML from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
 
 ID convention: `R1`, `R2`, ... for recommendations (`R` for recommendation).
 

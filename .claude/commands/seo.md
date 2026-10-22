@@ -42,8 +42,8 @@ Resolve the brand's reference sheet. Load the strategy pack for goals / personas
 
 | brand | GSC site | URL | pack |
 |---|---|---|---|
-| axia | `sc-domain:axiaoffice.com.au` | `https://axiaoffice.com.au/` | `../client-projects/wolf-and-eagle/clients/axia-office/tasks/2026-07-21-strategy-pack/DRAFT-AXIA-STRATEGY-PACK-v0.1-2026-07-21.html` |
-| vlc | `sc-domain:virtual.hillcrest.qld.edu.au` | `https://virtual.hillcrest.qld.edu.au/` | `../client-projects/edisoned/clients/hillcrest-christian-college/tasks/2026-07-21-strategy-pack-vlc/…` |
+| axia | `sc-domain:axiaoffice.com.au` | `https://axiaoffice.com.au/` | `client-projects/wolf-and-eagle/clients/axia-office/tasks/2026-07-21-strategy-pack/DRAFT-AXIA-STRATEGY-PACK-v0.1-2026-07-21.html` |
+| vlc | `sc-domain:virtual.hillcrest.qld.edu.au` | `https://virtual.hillcrest.qld.edu.au/` | `client-projects/edisoned/clients/hillcrest-christian-college/tasks/2026-07-21-strategy-pack-vlc/…` |
 | hcc | `https://www.hillcrest.qld.edu.au/` | `https://www.hillcrest.qld.edu.au/` | `.../2026-07-21-strategy-pack-oncampus/…` |
 
 For `vlc` / `hcc`, read `VLC-OPERATING-RULES.md` first (locked rules).

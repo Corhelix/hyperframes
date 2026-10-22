@@ -287,7 +287,7 @@ Fix what fails. Deliver.
 
 ## Canonical output scaffold (MANDATED)
 
-PRD-2 is decision-bearing — every screen, every state, every interaction pattern becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
+PRD-2 is decision-bearing — every screen, every state, every interaction pattern becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
 
 ID convention: `S` screens · `J` journeys · `I` interaction patterns · `D` design decisions · `Q` open questions.
 

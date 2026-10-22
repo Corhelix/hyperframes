@@ -282,7 +282,7 @@ Anxiety is the one paid accounts skip. On a considered purchase the click is che
 
 ## Phase 5 — Output
 
-Write the **strategy of record** as branded HTML using the decision-tagging scaffold at `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`, so every recommendation is a stamp-able row (LOCK / REVISE / DROP / DEFER).
+Write the **strategy of record** as branded HTML using the decision-tagging scaffold at `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`, so every recommendation is a stamp-able row (LOCK / REVISE / DROP / DEFER).
 
 ID convention: `D` decisions · `R` risks · `Q` open questions · `S` scope boundaries.
 

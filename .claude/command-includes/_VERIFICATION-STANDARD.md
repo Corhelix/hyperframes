@@ -75,6 +75,10 @@ fails this automatically, which is the point.
 **State what you did not check.** A verification record without a limits section claims
 unbounded scope. Name the host, the date, what passed, and what was not tested at all.
 
+### The source of a requirement
+
+A claim about what was **asked for** is verified only against the operator's own words, with the thread, file or timestamp they came from. A brief, an order, a spec, a plan written by a model, or a summary of a conversation is **documented but unverified** until the operator's words behind it are quoted. This is what stops a clean verification of the wrong thing: every check that compares an output with the brief confirms the brief, whether or not the brief was right. For a goal-build run the quoted words live in `REQUIREMENTS-TRACE.md`, and the source-fidelity verifier is given that file and the built artefact, never the brief. (In `/goal-build` this check is called Lens 4, source fidelity; it is separate from the claim labels above, which this file also numbers Lens 4.)
+
 ## Findings that survive
 
 A finding that vanishes between audits was never a finding, it was an observation. The

@@ -33,7 +33,7 @@ Define what needs to be built, how it should work, and what done looks like. Pro
 
 ## Canonical output scaffold (MANDATED)
 
-Specs are decision-bearing — requirements, open questions, acceptance criteria, scope items all become rows Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout — copy from the canonical and fill placeholders. ID convention: `S1`, `S2`, ... for sections; `D1`, `D2`, ... for design decisions; `T1`, `T2`, ... for tasks/requirements; `Q1`, `Q2`, ... for open questions.
+Specs are decision-bearing — requirements, open questions, acceptance criteria, scope items all become rows Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout — copy from the canonical and fill placeholders. ID convention: `S1`, `S2`, ... for sections; `D1`, `D2`, ... for design decisions; `T1`, `T2`, ... for tasks/requirements; `Q1`, `Q2`, ... for open questions.
 
 If the canonical is missing, STOP and ask. See `alc-group/brand-ops/templates/README.md` for selection rules.
 

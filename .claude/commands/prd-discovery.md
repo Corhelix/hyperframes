@@ -200,7 +200,7 @@ Fix what fails. Deliver.
 
 ## Canonical output scaffold (MANDATED)
 
-PRD-1 is decision-bearing — every problem statement, switching-dynamic, competitive frame becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
+PRD-1 is decision-bearing — every problem statement, switching-dynamic, competitive frame becomes a row Andrew has to stamp LOCK / REVISE / DROP / DEFER. **Always start the HTML output from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`** (modules + Decision Register + Archive section + tagging UI). Never hand-write the brand CSS or invent a layout.
 
 ID convention: `D` decisions · `Q` open questions · `S` scope items · `R` risks.
 

@@ -48,8 +48,8 @@ If the user names a client (e.g., "Axia Office", "Hillcrest"), identify the pare
 Read `protocols/entity-repo-map.md`. Find the entity's table. Read **every file listed** — no exceptions, no tiers, no "on-demand."
 
 Path resolution:
-- `alc-group/` → ``
-- `client-projects/` → `../client-projects/`
+- `alc-group/` → GitHub `Corhelix/alc-group`, read from `origin/main`
+- `client-projects/` → GitHub `Corhelix/client-projects`, read from `origin/main`
 
 If a file doesn't exist, mark it as **GAP** — do not skip silently.
 

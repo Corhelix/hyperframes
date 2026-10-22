@@ -11,8 +11,16 @@ contract:
   does_not_fire_when:
     - the question is pricing strategy -> /strategise
   loads:
-    always: []
-    skills: []   # names no skill; see _COMMAND-CONTRACT on Phase 0
+    always:
+      - departments/cfo.md
+    # Still empty, and now for a stated reason rather than by omission. The
+    # department declares which skills it may pull, and `departments/_CONTRACT.md`
+    # rules that a skill is "never loaded except through an active department".
+    # A command naming its own skills bypasses the lens, which is the failure the
+    # department layer exists to prevent. `Corhelix/skills bin/resolve-skills.py`
+    # resolves what cfo.md declares: virtual-cfo, accounting-and-tax,
+    # xero-accounting, rd-tax-offset, small-business. 5 of 5, exact.
+    skills: []
   returns:
     - id: position
       is: the numbers with their as-of date and their source system
@@ -33,9 +41,21 @@ Run one of four CFO workflows against live Xero data. This is the analysis layer
 it explains what the numbers mean and what to do next. It does not post entries,
 lodge anything, or give a statutory tax position.
 
-**Load `.claude/skills/virtual-cfo/SKILL.md` before Step 1.** It carries the
-operating rules, the three standing checks and the standard output. This command
-sequences the work; the skill governs how it is done.
+**Load `departments/cfo.md` before Step 1.** It is the CFO lens and the wiring in
+one file: the standing questions this role cannot stop asking, what it leads against
+what it only advises, what it hands to whom, and the `skills:` it may pull. It is
+declared in `contract.loads.always` above, so the transcript checker confirms it was
+read rather than trusting this sentence.
+
+Then pull the skills **through** that lens, not around it. `cfo.md` declares five and
+all five resolve: `virtual-cfo` (the operating rules, the three standing checks and
+the standard output), `accounting-and-tax`, `xero-accounting`, `rd-tax-offset` and
+`small-business`. Resolve them with `bin/resolve-skills.py` in `Corhelix/skills`.
+
+The order is fixed and it is the whole point: this command sequences the work, the
+department decides, and a skill executes against a decision already made. Reversed,
+you get a technique applied without a judgement, which is what a skills-first system
+produces every time (`departments/_CONTRACT.md`: skills never decide).
 
 ---
 

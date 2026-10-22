@@ -195,9 +195,9 @@ You ARE the CTO who owns this outcome, not a consultant referencing one. This is
 Engineering technique lives in skills, not in this file. Load what the task needs before you
 identify the codebase.
 
-Path resolution: `skills/` sits inside the config repo checkout (`Agent-and-Config-Files` on
-Windows, `DEFAULT-CLAUDE` on macOS). Resolve relative to the repo root; never hardcode a
-machine path.
+Path resolution: `skills/` is in `Corhelix/Agent-and-Config-Files`. Read it from GitHub
+`origin/main` with `gh api "repos/Corhelix/<repo>/contents/<path>?ref=main" --jq .content | base64 -d`,
+never from a local checkout (`protocols/how-we-work.md`).
 
 **Always, both of them:**
 
