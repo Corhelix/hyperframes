@@ -101,7 +101,7 @@ Nine blocks. This is the form. An intake missing a **load-bearing** block cannot
 
 **7. Brand and design.** The palette, type, tone, and the template or design system to follow. **Whether one already exists is the important question** — an existing system is adopted verbatim at `/goal-build` Phase 1e, and inventing a second one is the single most repeated failure in this system's history.
 
-**8. Platform and data.** Stack locks, where it runs, who signs in, what stores state, which credentials exist *now*. Also: what the deliverable actually is — the file, the record, the site — because it must not end up gitignored.
+**8. Platform and data.** Stack locks, where it runs, who signs in, what stores state, which credentials exist *now*. Also: what the deliverable actually is — the file, the record, the site — because it must not end up gitignored. **And the surface of record: where the operator will read or use the result, and which surface is primary** (an app module, a per-repo file, both). Quote the operator's own words for the deliverable, the surface and the platform, with where they said them. These three are never `derived`: they are `answered`, `assumed` with the reversal cost, or `unknown`. *(v1.1: a brief that guessed the surface cost a whole run.)*
 
 **9. Release.** Who the beta users are, by name or role, and where it deploys. Without this, Phase 5 has nobody to test with and the pipeline stalls at the second gate.
 
@@ -112,6 +112,8 @@ Nine blocks. This is the form. An intake missing a **load-bearing** block cannot
 Open what you were handed. A path is a claim: record that it resolved, and record every path it names that did not. Read the brand material if it exists rather than describing it from its filename.
 
 Where an entity is named, load its context — brand, ICP, positioning, tone — before writing anything about it.
+
+**Look for a parent plan before you trust the input.** Run `python3 ~/.claude/scripts/goal-build-find-parent-plan.py --subject <each repo and product name, in every spelling> --github` (it lives in `global/scripts/` of `Corhelix/claude-system`). A larger plan that names this work outranks the input where they differ. Record what it found, or the places searched, in the order's Open questions. An order that omits a parent plan it could have found is the failure the scripts exist to stop.
 
 State back, in five lines: the product, the person, the job, the defining gesture as you currently understand it, and how much of the nine blocks the input actually covers. That last number is the honest starting position and it is usually low.
 
@@ -218,6 +220,8 @@ Date · Operator · Appetite · Status: DRAFT | READY | APPROVED | SUPERSEDED
 ## 7. Brand and design    [state] Existing system: [path] or "none — define minimum at 1e"
 ## 8. Platform and data   [state] Stack · runtime · auth · storage · credentials on hand
                                   Deliverable: [what] · gitignored: no
+                                  Surface of record: [where the operator reads it; which is primary]
+                                  Operator's words: "[quoted]" - [thread/file/timestamp]   Parent plan: [found: path | none found; searched: ...]
 ## 9. Release             [state] Beta users: [named] · Deploys to: [where]
 
 ## Assumptions            One row each: the assumption, why, and what reversing it costs.
@@ -233,7 +237,7 @@ Date · Operator · Appetite · Status: DRAFT | READY | APPROVED | SUPERSEDED
 
 Reformatting a brief and calling it an order. Filling an Unknown with a default and not marking it. Writing a constraint you have not confirmed the product actually has. Paraphrasing a source into the order rather than quoting it. Passing an order to the human gate that fails the Definition of Ready, and asking them to decide anyway.
 
-A job written as a feature. A defining gesture with a conjunction in it. An empty no-go list. An appetite left unstated because the operator was reluctant to state one. Describing an existing design system rather than naming its path. Naming a deliverable without checking it is not gitignored.
+A job written as a feature. A defining gesture with a conjunction in it. An empty no-go list. An appetite left unstated because the operator was reluctant to state one. Describing an existing design system rather than naming its path. Naming a deliverable without checking it is not gitignored. Marking the deliverable, surface of record or platform `derived`. Omitting the operator's quoted words for them. Skipping the parent-plan search.
 
 Presenting the human gate as a document review when the decision is go or kill. Letting the order diverge from the journeys after Phase 1d without correcting it.
 

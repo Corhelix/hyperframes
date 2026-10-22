@@ -1,6 +1,13 @@
 # _GOAL-BUILD-TEMPLATES — state schemas and spawn prompts for /goal-build
 
 <!-- Include, not a command. Lives beside the commands, like _GATE-MECHANICS.md. v0.2 2026-08-21 -->
+<!-- v0.5 2026-10-21: goal-build v1.2 (Map-Builder Run A). BUILD-BRIEF carries `command: goal-build v1.2`; REQUIREMENTS-TRACE gains Binding rule and
+     Observed conflict rows and the Base app lines; new schemas for READ-PLAN/READ-LOG, EXISTING-SCREENS, NAVIGATION-MAP and the DECISIONS lines the gate reads;
+     spawn prompt 7 (UX lock critic) now walks the real app and answers nine questions; spawn prompt 8 (fidelity verifier) re-reads the approved specification
+     files itself and checks navigation reach; "side nav" is now "the app's real navigation". -->
+<!-- v0.4 2026-10-12: BUILD-BRIEF follows the v1.0 four-state slots (answered, derived, assumed, unknown) and
+     carries `command: goal-build v1.1`; adds REQUIREMENTS-TRACE.md and SCOPE.txt; the UX lock critic reads
+     the trace and answers five questions; adds spawn prompt 8, the requirements fidelity verifier. -->
 <!-- v0.3 adds the Owner column, STATUS.md, and the `Staffed by` slot on every spawn prompt:
      a worker is staffed by a C-level identity resolved at runtime, and skills resolve from the
      skills tree. No template names a skill or a worker.
@@ -18,6 +25,7 @@ Why this file exists: a matrix whose shape is reinvented every run can be quietl
 ```
 # BUILD-BRIEF — [project name]
 Locked: [date] · mode: [fresh|resume] · scale: [mvp|full]
+command: goal-build v1.2
 
 ## Mission
 [outcome, reference products, better means, out of scope — from the brief]
@@ -32,10 +40,119 @@ Locked: [date] · mode: [fresh|resume] · scale: [mvp|full]
 [the one command that proves the app still boots — every resume runs it first]
 
 ## Assumptions
-| Slot | Value chosen | Source |
-|---|---|---|
-| [slot] | [value] | given / assumed |
+| Slot | State | Value chosen | Source |
+|---|---|---|---|
+| [slot] | answered / derived / assumed / unknown | [value] | [for answered: where the operator said it; for derived: the evidence; for assumed: what reversing it costs; for unknown: the question] |
 ```
+
+Rules: the deliverable, the surface of record, the platform and the audience are never `derived`, and an `unknown` blocks the run from starting. The brief is a summary: the operator's own words live in `REQUIREMENTS-TRACE.md`.
+
+### OPERATOR-WORDS.md
+
+The operator's own words, copied verbatim, nothing else. It is the only file a quote in the trace may cite. The stop gate checks that every `answered` quote appears in it, so it is as good as the copy: take the words from the conversation you were invoked in and the thread the operator names, never from the brief.
+
+```
+# OPERATOR-WORDS: [project name]
+Thread: [thread or session id] · Copied by: [who] · Copied: [date]
+
+## [timestamp]
+[the operator's message, verbatim, complete]
+
+## [timestamp]
+[the next message, verbatim]
+```
+
+### REQUIREMENTS-TRACE.md
+
+Written in Phase 0, before any phase. It holds what the operator actually asked for, and every row is checked against `OPERATOR-WORDS.md`. The stop gate reads it (`goal-build-stop-gate.py --check-trace`), and the original source for every verification is this file and the words it cites.
+
+```
+# REQUIREMENTS-TRACE: [project name]
+Opened: [date] · Operator: [name]
+
+| ID | Requirement | Operator's words (verbatim) | Source | State |
+|---|---|---|---|---|
+| T1 | Deliverable: [what is to exist when this is done] | "[quoted]" | file:OPERATOR-WORDS.md#[timestamp] | answered |
+| T2 | Surface of record: [where the operator reads or uses it, and which surface is primary] | "[quoted]" | file:OPERATOR-WORDS.md#[timestamp] | answered |
+| T3 | Platform: [where it runs] | "[quoted]" | file:OPERATOR-WORDS.md#[timestamp] | answered |
+| T4 | Audience: [who it is for] | "[quoted]" | file:OPERATOR-WORDS.md#[timestamp] | answered |
+| T5 | Parent decision: [one binding decision of the found plan] | "[quoted from the plan]" | file:[the plan's path] | answered |
+| T6 | Binding rule: [what the repo's own file says the product must do, must not do, or is for] | "[quoted from the file]" | file:[repo path]:[line] | open |
+| T7 | Observed conflict: [a control or page in the app that contradicts a rule or a journey] | "[quoted from the code or the page]" | file:[repo path]:[line] | open |
+
+Parent plan search: found: [path, path] | none found; searched: [place one; place two; ...]
+Not parent: [full path] because [reason of at least three words]
+Search limited: [reason of at least four words]   (only if fewer than two places could be searched)
+Reconciliation: [at least eight words: where the brief and the plan differed, and how the operator settled it]
+Parent plan reconciled: yes
+Base app: none | [folder of the app already in the repo]
+Adopt existing CSS and navigation: yes | no   (only with a base app)
+Operator's words (base app): "[quote]"   (only with a base app; the quote must be in OPERATOR-WORDS.md)
+Ingestion plan: BASE-APP.md   (only when adopting)
+Primary surface delivered: [a URL, or a path that exists]   (written at close)
+```
+
+Rules:
+- One row at least for each of Deliverable, Surface of record, Platform and Audience. State is `answered` (a quote of at least a clause, cited as `file:<path>` to a file that is not a document the run wrote, and the quote must appear in it), `assumed` (the Source column states what reversing it costs), or `unknown` (a question for the operator; blocks the run). `derived` is not allowed on these four.
+- `PARENT-PLAN-SEARCH.json` is written by `goal-build-find-parent-plan.py --out`. Every hit in it (local or GitHub) appears either in the `found:` line or in a `Not parent: <path> because <reason of at least three words>` line; a GOAL, PLAN or SCOPE file that names the subject cannot be waved away that way. A `found:` path must be one the search found. 'none found' is refused while the file lists a hit, and names at least two different places searched. The file's subjects must appear in the brief, and the places it lists must exist.
+- If a parent plan is found, add at least one row per found plan whose Requirement starts `Parent decision:`, quoting a binding decision from that plan and citing it as `file:<the plan's path>` (the gate checks the quote against the plan). Write `Parent plan reconciled: yes` only after every disagreement with the brief has been settled with the operator. The Surface of record cannot be `assumed` when a plan was found.
+- At close, `Primary surface delivered:` names, as a URL or a path that exists, where the operator can open the surface the trace calls primary. If it was not delivered: `Primary surface not delivered: <reason>; accepted by operator in DECISIONS D#`, with D# logged as a decision about the surface that records the operator's acceptance.
+- Do not cite the brief, the strategy or any derived document as a source. A `|` inside a quote breaks the table: replace it.
+- The gate cannot tell a faithful excerpt from an invented one. That is what the operator reading the trace, and spawn prompt 8, are for.
+- v1.2: a `Binding rule:` or `Observed conflict:` row quotes the file at the line it cites, and the gate checks the quote is there. State is `open` (allowed until the UX lock), `carried:J2,S4,A7` (each ID must exist in JOURNEYS.md, SCREENS.md, ACCEPTANCE.md or FEATURE-MATRIX.md), `conflict:D12` or `declined:D12` (D12 is a DECISIONS.md line that records the operator's words and cites `file:OPERATOR-WORDS.md#<timestamp>`). Every rule in READ-LOG.json must have a row.
+- v1.2: with a base app, what happens to its CSS and navigation is the operator's choice in their own words. `Base app: none` on a repo that already runs an app is refused.
+
+### SCOPE.txt
+
+One glob per line, `#` for comments. It lists every path the run may write outside its own build folder, derived from the trace. Each glob starts with a literal path at least three segments deep (`fnmatch` lets `*` cross `/`, so `/Users/**` or `~/**` is a catch-all and is refused). `goal-build-scope-gate.py` denies a write that matches none of them, and is inert when the file is absent or empty, which is why a v1.1 run may not close without it.
+
+```
+# [project] - see REQUIREMENTS-TRACE.md
+[absolute path or glob the run may write]
+```
+
+### READ-PLAN.json, READ-PLAN.html and READ-LOG.json (v1.2)
+
+Written by `goal-build-read-check.py`, not by hand. `enumerate` builds the plan from the repo: a row per specification file with `path`, `lines`, `sha256`, `heading`, `headings`, `why`, `status` (`to-read` or `not-planned`) and `reason`. `approve` adds the operator's approval with a hash of the list. `log` adds a row per file read: `path`, `lines`, `sha256` and `rules` (`[{"quote": "...", "line": 5}]`), and sets the file-level `conflicts` (`"none"` or `[{"summary": "...", "decision": "D12"}]`). `check` proves the log against the files and the session transcript. `READ-PLAN.html` is the page the operator reviews, rendered from the plan on the CLARITY report template: one row per file (path, lines, headings, why, status), the not-planned rows with their reasons, the skipped files, and the total lines to be read.
+
+Rules: the plan lists every file the tool found; a row is never removed, only marked not-planned with a reason of at least three words and approved again; a rule is anything the file says the product must do, must not do, or is for.
+
+### EXISTING-SCREENS.md and NAVIGATION-MAP.md (v1.2, base app only)
+
+`EXISTING-SCREENS.md` is seeded by `goal-build-screens-check.py seed`; the routes are scanned from the code:
+
+```
+| Route | File | Decision | Journey steps |
+|---|---|---|---|
+| /walkthroughs/[projectId] | src/app/walkthroughs/[projectId]/page.tsx | change | J1.2 |
+
+## Controls
+
+| Route | Control | Decision | Why |
+|---|---|---|---|
+| /walkthroughs/[projectId] | Upload walkthrough button | change | becomes the upload code |
+```
+
+`NAVIGATION-MAP.md` places every journey step on the app's own navigation:
+
+```
+| Journey step | Screen route | Reached via | New menu |
+|---|---|---|---|
+| J1.2 | /walkthroughs/[projectId] | Header > Sites > Example Site > Walkthroughs tab | no |
+| J1.1 | new:/sites/[id]/overview - the site home the IA defines | Header > Sites > Example Site | no |
+```
+
+Rules: every real route has a row and a decision (keep, change, remove); a change lists its controls; a screen a journey uses is not marked remove; a new route is written `new:/route - reason`, is not a shell, mock or stub route, and does not share its destination with a real one (`distinct:D#`, with the operator's logged decision, is the only exception); `Reached via` is a path through the app's navigation written A > B > C; a new menu item is `+Name` in the path and the `New menu` cell is `proposed:D#`.
+
+### Lines the gate reads in DECISIONS.md (v1.2)
+
+```
+YYYY-MM-DD - D# - UX-CRITIC round N: pass | fail - [the verdict, copied from the critic]
+YYYY-MM-DD - D# - UX-LOCK: locked (date) url: https://[deployed or preview address] operator words: "[their reply]" critic rounds: N; passed: M; last: pass
+YYYY-MM-DD - D# - [DEFECT-ID] accepted as risk, deferred to [run]; operator [words], file:OPERATOR-WORDS.md#[timestamp]
+```
+
+The lock line must agree with the critic lines (rounds, passes and the last result), and the quote must be in OPERATOR-WORDS.md. Deferred defects sit under a `## Deferred` heading in DEFECTS.md, one row each, and STATUS.md says `Deferred: N`.
 
 ### FEATURE-MATRIX.md
 
@@ -150,7 +267,7 @@ As: [role/permissions] · Owner: [C-level identity] · Screens: S1 → S2 → S3
 
 | # | Gesture (what the person does) | What happens on screen | Success criterion (observable) | Passes forward |
 |---|---|---|---|---|
-| 1 | clicks Import in the side nav | a selector panel opens over the list | the panel is visible and its Choose file control is operable | nothing |
+| 1 | clicks Import in the app's navigation | a selector panel opens over the list | the panel is visible and its Choose file control is operable | nothing |
 | 2 | chooses a file | the filename appears beside Continue, Continue enables | the chosen filename is shown verbatim | the file, to S2 |
 | 3 | clicks Continue | the mapping screen loads | the mapping screen header shows that same filename | the file and its column list, to S3 |
 
@@ -179,12 +296,15 @@ Rewritten in full at every phase boundary, every park and every escalation. It i
 
 ```
 # STATUS — [project] · [ISO timestamp]
+Task (verbatim): "[the operator's request, copied word for word from OPERATOR-WORDS.md; at least 5 words]"
 
 Phase:      [0, 1a, 1b, 1c, 1d, 2, 3 or 4, and what is happening right now]
 Matrix:     [n] green · [n] parked · [n] failing   (of [total])
 Journeys:   [n] walked · [n] broken · [n] not-walked
 UX lock:    [not-proposed | proposed (date) | locked (date) | revised (date)]   Shells: [n] walked · [n] broken
 Defects:    [n] open · [n] fixed · [n] retested    Phase 3 sweep: [not-run|complete]
+Trace:      [ok (date) | missing]   Bind: [MATCH sha8 | DIFFER | BIND-UNVERIFIED]
+Reads:      [n of N files read and logged | not started]   Deferred: [n]   /goal line for the operator: [the line]
 
 In flight:  [the row or journey being worked, and its owner]
 Blocked:    [F# — trigger, one line each; or "none"]
@@ -193,6 +313,37 @@ Next:       [the single next action]
 ```
 
 Rule: an operator reading only this file knows where the run is. If that is not true, the file is wrong.
+
+*(v1.3)* The first line after the title is the task anchor. `goal-build-content-check.py anchor <build folder>` refuses a line that is not a quotation from `OPERATOR-WORDS.md`, so the task cannot be restated from memory after a compaction.
+
+### QUALITY.json, figures.json, and the review lines (v1.3, document or surface builds)
+
+`QUALITY.json` in the build folder. Every key is optional; an absent key takes the strict default in `goal-build-content-check.py`. The brief sets the values and `Lens 2b` applies them.
+
+```
+{
+  "max_figure_share_of_steps": 0.35,
+  "max_talking_head_share": 0.05,
+  "max_repeat_share": 0.05,
+  "max_nothing_shown": 0,
+  "long_step_words": 40,
+  "max_long_step_share": 0.10,
+  "max_step_words": 60,
+  "max_filler_pages": 0,
+  "near_dup_bits": 5
+}
+```
+
+`figures.json`: `{"<image file name>": "<kind>"}`, where kind is `talking-head`, `slide`, `screen` or another label the shot classifier uses. It is written by the classifier, not by the builder. Without it the talking-head share is inferred from caption wording, which a caption that never mentions the camera defeats.
+
+Lines `goal-build-content-check.py` reads in `DECISIONS.md`:
+
+```
+YYYY-MM-DD - D# - SHELL-REVIEW: pass (YYYY-MM-DD) reviewers: N coverage: A of B
+YYYY-MM-DD - D# - UX-LOCK: locked (YYYY-MM-DD) panel: N reviewers: <id>, <id> coverage: M of M critic rounds: R; passed: P; last: pass
+```
+
+`SHELL-REVIEW` needs `N` of at least 2 and `A` equal to `B`. Matrix rows with IDs starting `SH` are the shell, cover and sample pages and are exempt from the ordering check; every other row must go green on a commit dated on or after the review.
 
 ### evidence/ — the naming law
 
@@ -246,6 +397,15 @@ The supporting CSS (`.gap`, `.pair`, `.pane`, `.shot`, `.cap`, `.ux`, `svg.wire`
 ---
 
 ## Spawn prompts
+
+**Coverage clause (v1.3). Append to prompts 3, 5, 6, 7 and 8.**
+
+```
+Coverage: your return states, as its own sentence, "reviewed N of M images" (or pages, or gestures),
+where M is the number you were given and N is the number you actually opened and looked at. Anything
+you did not open is listed by name. If N is less than M for images, your verdict is FAIL and says so;
+you do not pass a build you only partly saw.
+```
 
 ### 1. Research dimension agent (Phase 1)
 
@@ -354,18 +514,56 @@ Reused unchanged at Phase 1c against the shells: point [url] at the shell server
 
 ```
 Staffed by: [the identity accountable for the product surface]. Judge as that role judges.
-You have fresh eyes and no stake in this build. Read only: [BUILD-BRIEF.md, STRATEGY.md,
-SCREENS.md, JOURNEYS.md]. Then serve and walk the shells yourself at [shell path], in a real
-browser, at [viewports]. Do not read the shells' source; click them.
-Objective: answer four questions and nothing else.
+You have fresh eyes and no stake in this build. Read only: [BUILD-BRIEF.md, STRATEGY.md, SCREENS.md,
+JOURNEYS.md, REQUIREMENTS-TRACE.md, and for a base app EXISTING-SCREENS.md and NAVIGATION-MAP.md].
+You are also given READ-PLAN.json, the list of the repo's specification files the operator approved. Open the ones
+you need and read them yourself. Do not rely on any summary of them, including the rules the trace quotes.
+Then walk the real thing yourself in a real browser at [viewports]. For a base app that is the deployed real app at
+[the address the operator will be asked to open], starting from its front door; for a greenfield build it is the
+shells at [shell path]. Click; do not read source. If a person would have to use the navigation to reach a page, do
+the same: do not type its address.
+Objective: answer nine questions and nothing else.
 1. Does every outcome the brief names have a journey that reaches it?
 2. Does every gesture carry a success criterion someone could watch being true or false?
 3. Does everything a gesture passes forward actually appear on the receiving screen?
-4. Does every shell sit inside the product's real header and side nav, with the current item
-   marked, rather than floating as an isolated screen?
-Boundaries: fix nothing; write no files; do not comment on visual design, wording, spacing or
-colour, because the shells are deliberately unbranded and saying so is noise.
-Return: VERDICT pass or fail. On fail, the numbered failures, each naming the journey or screen
-and which of the four questions it fails. "Pass" is a valid and welcome answer.
+4. Does every screen sit inside the product's real navigation (header, context bar, tabs or side menu: whatever the
+   app has), with the current item marked, rather than floating as an isolated screen?
+5. Does every deliverable, surface and platform the brief states match a quoted operator row in
+   REQUIREMENTS-TRACE.md, and does the brief omit nothing the trace or a found parent plan makes binding?
+6. Is every Binding rule and Observed conflict row in the trace carried by a journey, screen or check that exists,
+   and does the real app, as you walk it, obey each rule? Name any rule you find in the specification files that
+   the trace does not list.
+7. For every existing page a journey touches, does every control on that page agree with the journeys and with the
+   binding rules? A control that does the opposite of a rule (a link that opens a view where the spec says the
+   code only uploads) is a failure.
+8. Is every journey screen reached through the app's own navigation, with no second header, second menu or parallel
+   set of pages, and no new menu item the operator has not approved?
+9. Does the first slice of the build plan deliver the entry point of the defining gesture, real, in the app?
+Boundaries: fix nothing; write no files; do not comment on visual design, wording, spacing or colour (a base app keeps
+its own).
+Return: VERDICT pass or fail. On fail, the numbered failures, each naming the journey or screen and which of the nine
+questions it fails. "Pass" is a valid and welcome answer.
 ```
 
+### 8. Requirements fidelity verifier (Phase 3, source fidelity)
+
+```
+Staffed by: [the identity accountable for the product surface]. You have no stake in this build.
+You receive exactly four things: (1) the operator's own words (OPERATOR-WORDS.md and the thread it was copied from,
+which you re-read yourself) and the parent plan if one was found; (2) READ-PLAN.json, the approved list of the repo's
+specification files, which you open and read yourself; (3) the built artefact, running or published at [address];
+(4) nothing else. You are NOT given BUILD-BRIEF.md, STRATEGY.md, SCREENS.md, JOURNEYS.md, READ-LOG.json, the trace's
+Binding rule rows or any agent's notes: the brief is a summary of the operator, not the operator, and a summary of a
+specification is not the specification.
+Objective: answer four questions, with evidence you generated yourself.
+1. Does the artefact follow from the operator's words: the deliverable, the surface of record, the platform and the
+   audience?
+2. If a parent plan names a primary surface, does the artefact deliver that surface, or only a secondary one? Name which.
+3. Does the artefact obey every binding rule you find in the specification files, read from the files yourself and not
+   from any summary? Quote each rule and show where in the running app it holds or fails.
+4. Starting from the app's front door and using only its navigation, can you reach the primary surface and each journey
+   screen? Name any you could reach only by typing an address.
+Boundaries: fix nothing; write no files; do not judge visual design.
+Return: VERDICT pass or fail. On fail, the numbered gaps, each quoting the operator's words or the specification line
+and what exists instead. "Pass" is a valid and welcome answer.
+```

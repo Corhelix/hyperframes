@@ -187,7 +187,7 @@ Present a tight 4-line intake:
 ```
 output_type: workshop-section
 slug:        2026-05-04-eai-section-6-narrative
-working_folder: ../client-projects/serve-with-clarity/clients/effective-aid/brand-kit/
+working_folder: client-projects/serve-with-clarity/clients/effective-aid/brand-kit/
 voice_register: Quiet Builder
 
 Tell me:

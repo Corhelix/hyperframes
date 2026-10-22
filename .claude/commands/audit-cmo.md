@@ -74,7 +74,7 @@ This command is SELF-CONTAINED. It is the single authority when invoked.
 
 ## Canonical output scaffold (MANDATED)
 
-**Always start the HTML output from `../alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html`.** Never hand-write the brand CSS or invent a layout. Copy from the canonical and fill placeholders.
+**Always start the HTML output from `alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html`.** Never hand-write the brand CSS or invent a layout. Copy from the canonical and fill placeholders.
 
 > **Corrected 2026-09-07.** This section previously mandated `HTML-DECISION-TAGGING-PATTERN.html` and a LOCK / REVISE / DROP / DEFER register on every audit. That contradicts the current rule in `CLAUDE.md` § Output Conventions, which retires decision registers for reports and audits: *an audit reports what is true against a standard that is already settled, so a breach of locked positioning is a defect, not a choice, and there is nothing to stamp.* The register template is retained only for genuine change-management surfaces where the reader must pick between open options.
 
@@ -220,8 +220,8 @@ For copy audit, load at minimum:
 - `pass5-copywriting-hooks-language.md` — hooks and language patterns (if it exists)
 
 Path resolution:
-- `alc-group/` → `../alc-group/`
-- `client-projects/` → `../client-projects/`
+- `alc-group/` → GitHub `Corhelix/alc-group`, read from `origin/main`
+- `client-projects/` → GitHub `Corhelix/client-projects`, read from `origin/main`
 
 Also load the Core Writing Standard skill: `skills/copywriting/Proofread-Anti-AI-Standard.md` (canonical rule source: `skills/copywriting/Proofread-Anti-AI-Standard.md`). The 3-pass proof — AusE spelling, anti-AI tells, brand hygiene — applies to both the audited asset (as Check 6) and the audit report itself before delivery.
 

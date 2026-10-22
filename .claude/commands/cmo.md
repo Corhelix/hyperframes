@@ -228,7 +228,7 @@ The Agentive Learning System audit (`reports/daily/2026-05-13.md`) found that 12
 6. `skills/digital-marketing/conversion-copywriting/SKILL.md` — copy quality rules, benefits > features
 7. `skills/copywriting/Proofread-Anti-AI-Standard.md` — 3-pass writing proof, mandatory on all output
 
-Path resolution: `skills/`, `knowledge-bank/` and `protocols/` are inside THIS repo — read them relative to the repo root (the checkout this command file lives in: `Agent-and-Config-Files` on Windows, `DEFAULT-CLAUDE` on macOS). Do not hardcode an absolute machine path.
+Path resolution: `skills/`, `knowledge-bank/` and `protocols/` are in `Corhelix/Agent-and-Config-Files`. Read them from GitHub `origin/main` with `gh api "repos/Corhelix/<repo>/contents/<path>?ref=main" --jq .content | base64 -d`, never from a local checkout (`protocols/how-we-work.md`).
 
 **GATE — present after the 7 reads complete:**
 > Skill pack loaded: creative-toolkit + 5 lenses + anti-AI standard. Tactical skills available on-demand per creative-toolkit's selector logic.
@@ -263,7 +263,7 @@ Wait for response.
 
 Read `protocols/entity-repo-map.md` → load ALL files for the entity.
 
-Path resolution: `alc-group/` and `client-projects/` are SIBLING repos cloned beside this one — resolve them as `../alc-group/` and `../client-projects/` relative to the repo root, on any machine.
+Path resolution: `alc-group/` and `client-projects/` are GitHub repos (`Corhelix/alc-group`, `Corhelix/client-projects`). Read their files from `origin/main` with `gh api "repos/Corhelix/<repo>/contents/<path>?ref=main" --jq .content | base64 -d`, never from a sibling local clone.
 
 Also load the Core Writing Standard skill: `skills/copywriting/Proofread-Anti-AI-Standard.md` (canonical rule source: `skills/copywriting/Proofread-Anti-AI-Standard.md`). This is the 3-pass proof — AusE spelling, anti-AI tells, brand hygiene — applied to all written output. See `protocols/output-protocol.md` § Core Writing Standard for the enforcement protocol.
 

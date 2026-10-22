@@ -35,7 +35,7 @@ This command is the explicit invocation of the pattern. The same pattern is also
 
 ## Canonical scaffold
 
-**Always read from:** `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`
+**Always read from:** `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`
 
 This is the single source of truth. Do NOT hand-write the brand CSS, module structure, register table, or action bar — copy from the canonical and fill in placeholders. If the canonical is missing, STOP and ask.
 
@@ -60,7 +60,7 @@ Wait for response.
 
 ### Step 2 — Generate the deliverable
 
-1. **Read** the canonical scaffold from `../alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`.
+1. **Read** the canonical scaffold from `alc-group/brand-ops/protocols/HTML-DECISION-TAGGING-PATTERN.html`.
 2. **Replace** the `{{...}}` placeholders:
    - `{{Document Title}}` → user's title
    - `{{Banner Text}}` → "CLARITY OS · {Title} · v0.1"
@@ -90,8 +90,8 @@ Resolve entity → repo via `protocols/entity-repo-map.md` (Output Routing secti
 
 Examples:
 - clarity-os-app → `../clarity-os-app/docs/reviews/YYYY-MM-DD-{slug}/DRAFT-REGISTER-{slug}-v0.1-YYYY-MM-DD.html`
-- alc-group entity → `../alc-group/companies/{entity}/reviews/YYYY-MM-DD-{slug}/DRAFT-REGISTER-{slug}-v0.1-YYYY-MM-DD.html`
-- client → `../client-projects/{parent}/clients/{client}/reviews/YYYY-MM-DD-{slug}/DRAFT-REGISTER-{slug}-v0.1-YYYY-MM-DD.html`
+- alc-group entity → `alc-group/companies/{entity}/reviews/YYYY-MM-DD-{slug}/DRAFT-REGISTER-{slug}-v0.1-YYYY-MM-DD.html`
+- client → `client-projects/{parent}/clients/{client}/reviews/YYYY-MM-DD-{slug}/DRAFT-REGISTER-{slug}-v0.1-YYYY-MM-DD.html`
 
 **HARD RULE:** Never write to `DEFAULT-CLAUDE/projects/`. If the entity → repo can't be resolved, STOP and ask the user to add the entity to the Product Repos table first.
 
