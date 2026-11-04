@@ -10,15 +10,21 @@ The scripts the SOP runs.
 
 | Script | Does | Status |
 |---|---|---|
-| `compose.py` | Builds the 16:9 image canvases (PIL) and composites them over the cut with ffmpeg | Used on the 3 Nov 2026 Gravitate Loom |
-| `cut_align.py` | The v0.1 cut builder. Its pause rule (1.5 s, trimmed to about 0.7 s) is superseded by the SOP rule: up to about 2 to 2.5 s is natural, and no dead air of around 5 s. It is kept only for its frame slicing. | Superseded rule |
-| `gap_sheets.py` | Builds gridded every-frame contact sheets for long gaps, read by eye | To build |
+| `compose.py` | Composites slides, the speaker panel, Hyperframes callouts and the subtitle text layer over the cut. All paths are parameters; reads layers.json | Used on the 4 Nov 2026 Gravitate Loom (Draft v2) |
+| `cut_align.py` | The v0.1 cut builder. Its pause rule (1.5 s, trimmed to about 0.7 s) is superseded by the SOP rule: up to about 2 to 2.5 s is natural, and no dead air of around 5 s. It is kept only for its frame slicing. Still holds the 3 Nov paths. | Superseded rule |
+| `render_exact.py` | Runs video-use render.py unchanged but caps each segment at its exact frame count, so the output matches the EDL sum (V6). Use frame-aligned EDL ranges | Used on the 4 Nov take |
+| `build_layers.py` | Stage 11: turns a layer plan, the EDL and the Scribe words into layers.json, landing each layer on its spoken word and checking the SOP copy and hold rules | Used on the 4 Nov take |
+| `gap_sheets.py` | Builds gridded every-frame contact sheets for long gaps, read by eye | Built (PR 20) |
 | `layers_to_xml.py` | Turns edl.json, layers.json and subtitles.json into FCPXML, xmeml and EDL, with text kept as text | To build |
-| `check_layers.py` | Checks every layer's position, timing and content (V2 to V5) | To build |
+| `check_layers.py` | Verifies the composited draft, V1 to V7: every join, layer and subtitle. Head position on a join stays a human read; the script flags it | Built, used on the 4 Nov take |
 | `grade_match.py` | Sample, measure, correct, test slices, recheck | To build |
 | `compose_916.py` | The 9:16 layout | To build |
 
 Both existing scripts still hold the Gravitate run's paths. Make the paths parameters before reuse.
+
+## callouts/ and subtitles/
+
+Hyperframes compositions for the text layers (SOP stage 12). `callouts/DESIGN.md` is the visual identity, written before any HTML; `callouts/template.html` plus `build_callouts.py` render each callout in layers.json as a transparent WebM. `subtitles/build_subtitles.py` builds subtitles.json and captions.srt and renders the text layer in chunks. Both lint clean with `hyperframes@0.9.10` and render with `--format webm`, which carries alpha. The run on the 4 Nov take used Montserrat and Inter, the SOP look, which the Hyperframes typography guide warns against; the deviation is logged in DESIGN.md.
 
 ## References (used where they live, not copied)
 
