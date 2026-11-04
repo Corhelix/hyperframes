@@ -96,7 +96,7 @@ def main():
         if label_words > 7: issues.append(f"{c['id']}: label {label_words} words, over 7")
         hold = max(3.0, 1 + 0.3 * (head_words + label_words))
         t_in = round(max(0, o - 0.10), 3)
-        mode = "C" if slide_at(t_in + 0.5) else "B"
+        mode = "C" if (plan.get("layout") == "rhs_all" or slide_at(t_in + 0.5)) else "B"
         callouts.append(dict(c, anchor_word=w["text"], src_t=round(w["start"], 3), out_in=t_in,
                              out_out=round(min(t_in + hold, total), 3), hold_s=round(hold, 2),
                              words=head_words + label_words, mode=mode,
@@ -108,10 +108,10 @@ def main():
     # a callout whose mode changes part-way (slide ends under it) is moved to the box for its whole life
     for c in callouts:
         end_mode = "C" if slide_at(c["out_out"] - 0.1) else "B"
-        if end_mode != c["mode"]:
+        if plan.get("layout") != "rhs_all" and end_mode != c["mode"]:
             issues.append(f"{c['id']}: slide state changes during the callout (starts {c['mode']}, ends {end_mode})")
 
-    json.dump({"version": 1, "format": "16:9", "fps": 24, "total_out_s": round(total, 3),
+    json.dump({"version": 1, "format": "16:9", "layout": plan.get("layout", "slides_only"), "fps": 24, "total_out_s": round(total, 3),
                "geometry": {"slide": SLIDE_BOX, "panel": PANEL_BOX, "callout_modes": CALLOUT_BOX, "callout_size": CALLOUT_SIZE},
                "segment_out_starts": [round(x, 3) for x in cum], "slides": slides, "callouts": callouts,
                "held_back": plan.get("held_back", []), "issues": issues}, open(a.out, "w"), indent=1)
