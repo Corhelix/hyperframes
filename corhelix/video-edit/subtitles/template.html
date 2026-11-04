@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=220" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --pill: rgba(255, 255, 255, 0.94);
+        --ink: #111111;
+        --hairline: #d9e1ee;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 220px;
+        overflow: hidden;
+        background: transparent;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 220px;
+      }
+      .cue {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 1920px;
+        height: 220px;
+        display: flex;
+        align-items: flex-end;
+      }
+      .cue.a {
+        justify-content: center;
+        padding-bottom: 120px;
+      }
+      .cue.c {
+        justify-content: flex-start;
+        padding: 0 0 40px 40px;
+      }
+      .pill {
+        font-family: "Montserrat", sans-serif;
+        font-weight: 700;
+        font-size: 40px;
+        letter-spacing: -0.01em;
+        line-height: 1.2;
+        color: var(--ink);
+        background: var(--pill);
+        border: 1px solid var(--hairline);
+        border-radius: 14px;
+        padding: 10px 26px 12px 26px;
+        max-width: 1240px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="subs" data-start="0" data-duration="{{DURATION}}" data-width="1920" data-height="220">
+{{CUES}}
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["subs"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
