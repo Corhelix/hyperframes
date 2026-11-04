@@ -71,6 +71,7 @@ def jpg(im, p, w=None):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     for k in ("layers", "subs", "edl", "base", "draft", "callout-projects", "slides", "work", "out"): ap.add_argument(f"--{k}", required=True)
+    ap.add_argument("--no-text-layer", action="store_true", help="subtitles are a separate SRT, not burned in: V5 is not applicable")
     a = ap.parse_args()
     L = json.load(open(a.layers)); S = json.load(open(a.subs)); E = json.load(open(a.edl))
     out = Path(a.out); (out / "joins").mkdir(parents=True, exist_ok=True); (out / "layers").mkdir(exist_ok=True); (out / "subs").mkdir(exist_ok=True)
@@ -99,7 +100,7 @@ def main():
             if kind == "callout": box = (it["box"][0], it["box"][1], it["box"][2], it["box"][3]); anchor = it["out_in"] + 0.10; need = it["hold_s"]
             else: box = (0, 0, W, H); anchor = it["out_in"] + 0.15; need = 3.0
             t0 = max(it["out_in"] - 2, 0); d = it["out_out"] - it["out_in"] + 4
-            cues = [(c["out_in"] - 0.05, c["out_out"] + 0.05) for c in S["cues"] if not c["suppressed_by"]]
+            cues = [] if a.no_text_layer else [(c["out_in"] - 0.05, c["out_out"] + 0.05) for c in S["cues"] if not c["suppressed_by"]]
             in_cue = lambda t: any(x0 <= t <= x1 for x0, x1 in cues)
             if kind == "slide":                       # present = the slide's own canvas is showing in the slide box
                 k = [x["id"] for x in L["slides"]].index(lid)
@@ -109,11 +110,14 @@ def main():
                 is_on = lambda v: v < 3
                 skip = lambda t: False
             elif it["mode"] == "C":                    # over a slide canvas: compare with that canvas
-                sl = next(x for x in L["slides"] if x["out_in"] <= it["out_in"] + 0.5 < x["out_out"])
-                k = [x["id"] for x in L["slides"]].index(sl["id"])
-                bx, by, bw, bh = box; by2, bh2 = by, 170           # top of the card only, clear of the subtitle line
-                ref = np.asarray(Image.open(Path(a.work) / f"slide{k + 1:02d}.png").convert("L").crop((bx, by2, bx + bw, by2 + bh2)), np.int16)
-                t0 = max(t0, sl["out_in"]); d = min(it["out_out"] + 2, sl["out_out"]) - t0
+                cov = [x for x in L["slides"] if x["out_in"] <= it["out_in"] + 0.5 < x["out_out"]]
+                bx, by, bw, bh = box; by2, bh2 = by, (bh if a.no_text_layer else 170)   # the whole box, or only the top of the card when a subtitle line shares it
+                if cov:
+                    sl = cov[0]; k = [x["id"] for x in L["slides"]].index(sl["id"])
+                    ref = np.asarray(Image.open(Path(a.work) / f"slide{k + 1:02d}.png").convert("L").crop((bx, by2, bx + bw, by2 + bh2)), np.int16)
+                    t0 = max(t0, sl["out_in"]); d = min(it["out_out"] + 2, sl["out_out"]) - t0
+                else:                                               # white canvas only (right-hand-side layout, no slide up)
+                    ref = np.asarray(Image.open(Path(a.work) / "bg.png").convert("L").crop((bx, by2, bx + bw, by2 + bh2)), np.int16)
                 D = crop_series(a.draft, t0, d, (bx, by2, bw, bh2))
                 pres = [(t0 + j / 10, float(np.abs(D[j] - ref).mean())) for j in range(len(D))]
                 is_on = lambda v: v > 1.0
@@ -138,7 +142,7 @@ def main():
             held = (vanish - appear) if (appear is not None and vanish is not None) else 0
             ok_pre = all(not is_on(v) for t, v in pre); ok_mid = bool(mid_) and all(is_on(v) for t, v in mid_)
             ok_post = all(not is_on(v) for t, v in post)
-            v3 = bool(ok_pre and ok_mid and ok_post and appear is not None and abs(appear - it["out_in"]) <= 0.3 and held >= need - 0.4)
+            v3 = bool(ok_pre and ok_mid and ok_post and appear is not None and abs(appear - (it["out_in"] + (0.15 if kind == "slide" else 0.10))) <= 0.3 and held >= need - 0.4)
             v3_note = f"absent before {ok_pre}, present throughout {ok_mid}, absent after {ok_post}"
             mid = (it["out_in"] + it["out_out"]) / 2
             fm, fbs = frame(a.draft, mid), frame(a.base, mid)
@@ -187,43 +191,47 @@ def main():
                 src = Path(a.slides) / it["file"]; ok4 = src.exists()
             rep["V4"].append(dict(id=lid, kind=kind, ok=ok4, copy=it.get("head", it.get("file")), source=it.get("source", "")))
 
-    # V5 subtitles
-    cues = S["cues"]; shown = [c for c in cues if not c["suppressed_by"]]
-    overlaps = [(p["id"], q["id"]) for p, q in zip(cues, cues[1:]) if q["out_in"] < p["out_out"] - 1e-6]
-    under = [c["id"] for c in shown if any(c["out_in"] < x["out_out"] and c["out_out"] > x["out_in"] for x in L["callouts"])]
-    strip_box = (0, 860, 1920, 220); fps = 24
-    sw, sh = 480, 55
-    def stream(video):
-        p = subprocess.Popen(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(video), "-vf",
-                              f"fps={fps},crop=1920:220:0:860,scale={sw}:{sh},format=gray", "-f", "rawvideo", "-"], stdout=subprocess.PIPE)
-        while True:
-            b = p.stdout.read(sw * sh)
-            if len(b) < sw * sh: break
-            yield np.frombuffer(b, np.uint8).astype(np.int16)
-    sig_l, spk = [], [0.0]; prev = None
-    for x, y in zip(stream(a.draft), stream(a.base)):
-        r = x - y
-        sig_l.append(float(np.abs(r).mean()))
-        if prev is not None: spk.append(float(np.abs(r - prev).mean()))
-        prev = r
-    n = len(sig_l); sig = np.array(sig_l) > 0.8; spk = np.array(spk)
-    bad = []
-    for c in shown:
-        k0, k1 = int(round(c["out_in"] * fps)), int(round(c["out_out"] * fps))
-        lo, hi = max(k0 - 2, 0), min(k0 + 3, n)
-        starts = spk[lo:hi].max() > 0.5 if hi > lo else False          # a text change within +-2 frames (+-0.1 s) of the cue start
-        held = sig[min(k0 + 2, n):max(min(k1 - 2, n), min(k0 + 2, n))]
-        if not (starts and (held.size == 0 or held.mean() > 0.9)): bad.append(c["id"])
-    covered = np.zeros(n, bool)
-    for c in shown: covered[int(c["out_in"] * fps):min(int(c["out_out"] * fps) + 3, n)] = True
-    for x in list(L["slides"]) + list(L["callouts"]):
-        covered[max(int(x["out_in"] * fps) - 2, 0):min(int(x["out_out"] * fps) + 8, n)] = True
-    stray = int((sig & ~covered).sum())
-    rep["V5"] = dict(cues=len(cues), shown=len(shown), overlaps=overlaps, under_callout=under, timing_failures=bad,
-                     stray_text_frames=stray, ok=bool(not overlaps and not under and not bad and stray < 12))
-    for c in shown[:: max(1, len(shown) // 6)][:6]:
-        f = frame(a.draft, (c["out_in"] + c["out_out"]) / 2)
-        if f: jpg(f, out / "subs" / f"{c['id']}.jpg", 960)
+    if not a.no_text_layer:
+        # V5 subtitles
+        cues = S["cues"]; shown = [c for c in cues if not c["suppressed_by"]]
+        overlaps = [(p["id"], q["id"]) for p, q in zip(cues, cues[1:]) if q["out_in"] < p["out_out"] - 1e-6]
+        under = [c["id"] for c in shown if any(c["out_in"] < x["out_out"] and c["out_out"] > x["out_in"] for x in L["callouts"])]
+        strip_box = (0, 860, 1920, 220); fps = 24
+        sw, sh = 480, 55
+        def stream(video):
+            p = subprocess.Popen(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(video), "-vf",
+                                  f"fps={fps},crop=1920:220:0:860,scale={sw}:{sh},format=gray", "-f", "rawvideo", "-"], stdout=subprocess.PIPE)
+            while True:
+                b = p.stdout.read(sw * sh)
+                if len(b) < sw * sh: break
+                yield np.frombuffer(b, np.uint8).astype(np.int16)
+        sig_l, spk = [], [0.0]; prev = None
+        for x, y in zip(stream(a.draft), stream(a.base)):
+            r = x - y
+            sig_l.append(float(np.abs(r).mean()))
+            if prev is not None: spk.append(float(np.abs(r - prev).mean()))
+            prev = r
+        n = len(sig_l); sig = np.array(sig_l) > 0.8; spk = np.array(spk)
+        bad = []
+        for c in shown:
+            k0, k1 = int(round(c["out_in"] * fps)), int(round(c["out_out"] * fps))
+            lo, hi = max(k0 - 2, 0), min(k0 + 3, n)
+            starts = spk[lo:hi].max() > 0.5 if hi > lo else False          # a text change within +-2 frames (+-0.1 s) of the cue start
+            held = sig[min(k0 + 2, n):max(min(k1 - 2, n), min(k0 + 2, n))]
+            if not (starts and (held.size == 0 or held.mean() > 0.9)): bad.append(c["id"])
+        covered = np.zeros(n, bool)
+        for c in shown: covered[int(c["out_in"] * fps):min(int(c["out_out"] * fps) + 3, n)] = True
+        for x in list(L["slides"]) + list(L["callouts"]):
+            covered[max(int(x["out_in"] * fps) - 2, 0):min(int(x["out_out"] * fps) + 8, n)] = True
+        stray = int((sig & ~covered).sum())
+        rep["V5"] = dict(cues=len(cues), shown=len(shown), overlaps=overlaps, under_callout=under, timing_failures=bad,
+                         stray_text_frames=stray, ok=bool(not overlaps and not under and not bad and stray < 12))
+        for c in shown[:: max(1, len(shown) // 6)][:6]:
+            f = frame(a.draft, (c["out_in"] + c["out_out"]) / 2)
+            if f: jpg(f, out / "subs" / f"{c['id']}.jpg", 960)
+
+    else:
+        rep["V5"] = dict(ok=True, note="not applicable: subtitles are a separate SRT, not burned in")
 
     # V6 duration, V7 audio
     s = sum(r["end"] - r["start"] for r in E["ranges"])
