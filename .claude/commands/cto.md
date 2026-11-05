@@ -18,6 +18,7 @@ contract:
       - viewports/cto.md
       - command-includes/_VERIFICATION-STANDARD.md
       - command-includes/_GOAL-FIRST-CONTRACT.md
+      - command-includes/_CAPABILITY-REGISTER.md
     conditional:
       - when: task touches UI, components or styling
         load: skills/frontend/senior-frontend.md
@@ -199,10 +200,11 @@ Path resolution: `skills/` is in `Corhelix/Agent-and-Config-Files`. Read it from
 `origin/main` with `gh api "repos/Corhelix/<repo>/contents/<path>?ref=main" --jq .content | base64 -d`,
 never from a local checkout (`protocols/how-we-work.md`).
 
-**Always, both of them:**
+**Always, all three:**
 
 1. `command-includes/_VERIFICATION-STANDARD.md` — what "verified" means. The three lenses.
 2. `command-includes/_GOAL-FIRST-CONTRACT.md` — the goal, the sprints, the banned patterns.
+3. `command-includes/_CAPABILITY-REGISTER.md` — which plugin skill, agent or tool we prefer for this task shape, what outranks a plugin, and which plugins are project-only or under review. Use its routes when you choose a capability. A plugin skill is technique inside a phase, never a replacement for one.
 
 **Then by task shape:**
 
@@ -219,6 +221,8 @@ never from a local checkout (`protocols/how-we-work.md`).
 **GATE — present after the loads complete:**
 
 > Skill pack loaded: [list]. Not loaded: [list, with why].
+>
+> Capability routes used: [route ids, or none]. Plugins relied on that are project-only or under review: [list, or none].
 
 **If a file is missing or unreadable**, flag it explicitly (`MISSING: <path>`) and continue.
 A missing skill is a system bug to be fixed, never a reason to operate without one.

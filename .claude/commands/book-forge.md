@@ -73,6 +73,8 @@ You are about to drift if you are:
 - Marching A→B→C→D in fixed order without re-reading the state → **CHECKLIST DRIFT**. Diagnose each pass.
 - Rebuilding canon selection or continuity here when the material is really competing drafts → **RECONCILE RE-OWN**. That is `/book-spine`. Hand it over.
 - Writing the blurb or subtitle before the body delivers on it → **SELL-FIRST DRIFT**. Selling copy is Move D, last.
+- Treating the author's phrases as mandated lines to insert or check → **CHECKLIST DRIFT**. Phrases are context, used where earned (Andrew, 2026-10-24).
+- Reviewing the material or a draft as a checklist before reading it whole as its reader → **CHECKLIST DRIFT**. Story first; reports interpret, never ledgers.
 - Drafting in a generic register instead of the author's captured voice → **VOICE MISS**. Match the `voice` note, not a house style.
 
 If any apply → stop, re-diagnose, read the relevant move reference file in full.
@@ -116,6 +118,8 @@ Move C · Forge the spine        → ~/.claude/skills/book-forge/references/spin
 Move D · Write the selling copy → ~/.claude/skills/book-forge/references/selling-copy.md
 ```
 
+Paths resolve in order: `~/.claude/skills/book-forge/` on the operator's machine, then `Corhelix/Agent-and-Config-Files` `skills/writing/book-forge/`, then `Corhelix/claude-system` `global/skills/book-forge/`. In a cloud or iOS session use the second.
+
 The full skill (with the hard rules and hand-off contract) is `~/.claude/skills/book-forge/SKILL.md`. Templates (promise brief, material map) live in `~/.claude/skills/book-forge/templates/`. The spine template is book-spine's — do not fork it: `~/.claude/skills/book-spine/templates/spine.template.yaml`.
 
 ---
@@ -126,10 +130,10 @@ The full skill (with the hard rules and hand-off contract) is `~/.claude/skills/
 Read the reference. Separate the topic from the contestable argument ("Most people believe X; this book argues Y"). Name the reader and their awareness state (Schwartz levels). Capture the author's voice from their most characteristic material. Produce a promise brief the author signs off before any structure. Fills the `book:` block of `spine.yaml`.
 
 ### Move B — Triage the material
-Read the reference. Extract everything to text (reuse `~/.claude/skills/book-spine/scripts/extract_text.py`). Run `~/.claude/skills/book-forge/scripts/triage_cluster.py` for a first-pass clustering, then judge each piece by hand: `book_worthy` (against the promise) and `role` (claim / evidence / mechanism / illustration / promotional / aside). Mark thin clusters as gaps; never fabricate. Produces `material-map.yaml`.
+Read the reference. If the author has already approved a flow or spine, its beats are the clusters: sort every piece to the beat it serves and record it as file plus line range; older drafts of the same book are raw material, not competing canon. Extract everything to text (reuse `~/.claude/skills/book-spine/scripts/extract_text.py`). Run `~/.claude/skills/book-forge/scripts/triage_cluster.py` for a first-pass clustering, then judge each piece by hand: `book_worthy` (against the promise) and `role` (claim / evidence / mechanism / illustration / promotional / aside). Mark thin clusters as gaps; never fabricate. Produces `material-map.yaml`.
 
 ### Move C — Forge the spine
-Read the reference. Sequence the clusters as an argument in dependency order, not a table of contents. Fill each chapter's spine fields (purpose, lead, key_beats, bridge, sources, locked_lines). Mark honestly: `present` / `weak` / `gap`. Every beat traces to triaged material or is a `gap`. Produces `spine.yaml` in the book-spine schema — the hand-off contract.
+Read the reference. Sequence the clusters as an argument in dependency order, not a table of contents. Fill each chapter's spine fields (purpose, lead, key_beats, bridge, sources with file and line ranges, and the author's phrases as context, never mandated). Mark honestly: `present` / `weak` / `gap`. Every beat traces to triaged material or is a `gap`. Produces `spine.yaml` in the book-spine schema — the hand-off contract.
 
 ### Move D — Write the selling copy
 Read the reference. Written LAST, after the body holds. Route each surface (subtitle, back-cover blurb, introduction, chapter openings) through `skills/copywriting/copy-framework-selector`, write from the confirmed spine, promise only what the body keeps, hold the author's voice, then run the Proofread standard.
