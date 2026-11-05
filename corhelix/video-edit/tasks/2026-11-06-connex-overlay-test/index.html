@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Connex overlay test</title>
+    <!--
+      Overlay test, Gravitate Loom take 2, beat B6, output 565.4 s to 577.5 s.
+      Placed in Resolve at timeline frame 99970 (01:00:00:00 + 565.4 s at 24 fps).
+      Transparent overlay: nothing here touches the speaker panel (1360,455 520x585).
+      Treatment: slide-up stack from behind a mask, blow-out (zoom out) inside each card,
+      callout in the callouts/DESIGN.md style. No spotlight, no dimming of image regions.
+      Deviation logged: Inter is not installed on this PC, so the label uses Montserrat 400.
+    -->
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Montserrat"; font-weight: 400; src: url("assets/fonts/Montserrat-Regular.ttf"); }
+      @font-face { font-family: "Montserrat"; font-weight: 600; src: url("assets/fonts/Montserrat-SemiBold.ttf"); }
+      @font-face { font-family: "Montserrat"; font-weight: 700; src: url("assets/fonts/Montserrat-Bold.ttf"); }
+      @font-face { font-family: "Montserrat"; font-weight: 900; src: url("assets/fonts/Montserrat-Black.ttf"); }
+      :root {
+        --card: #ffffff;
+        --ink: #111111;
+        --body: #3b4252;
+        --accent: #0066ff;
+        --hairline: #d9e1ee;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; }
+
+      /* The mask: cards rise from behind its bottom edge (y 860). */
+      #stage { position: absolute; left: 40px; top: 0; width: 1280px; height: 860px; overflow: hidden; }
+      .card {
+        position: absolute; left: 0; top: 40px; width: 1280px; height: 800px;
+        border-radius: 22px; overflow: hidden;
+        border: 1px solid var(--hairline);
+        box-shadow: 0 10px 32px rgba(17, 17, 17, 0.16);
+      }
+      #card-a { background: #001f60; }
+      #card-b { background: #ffffff; }
+      .zoom { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+      .zoom img { display: block; width: 1280px; height: 720px; }
+      .shade { position: absolute; inset: 0; background: #0b1220; opacity: 0; }
+
+      /* Callout, callouts/DESIGN.md: bottom-left, overlapping the card's lower-left corner. */
+      #callout { position: absolute; left: 40px; top: 790px; width: 1060px; height: 260px; display: flex; align-items: flex-end; padding-bottom: 18px; }
+      #co-card {
+        max-width: 1000px; padding: 26px 36px 28px 36px;
+        background: var(--card); border: 1px solid var(--hairline); border-radius: 22px;
+        box-shadow: 0 8px 28px rgba(17, 17, 17, 0.12);
+      }
+      #co-tag { font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 28px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+      #co-head { font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 54px; letter-spacing: -0.03em; line-height: 1.1; color: var(--ink); }
+      .wm { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: 0.08em; }
+      .w { display: inline-block; }
+      #co-labels { position: relative; height: 40px; margin-top: 12px; }
+      .co-label { position: absolute; left: 0; top: 0; white-space: nowrap; font-family: "Montserrat", sans-serif; font-weight: 400; font-size: 28px; line-height: 1.3; color: var(--body); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="connex" data-start="0" data-width="1920" data-height="1080" data-duration="12.1">
+      <div id="stage">
+        <div id="card-a" class="card">
+          <div id="zoom-a" class="zoom"><img src="assets/130.jpg" alt="Connex leaders checklist" /></div>
+          <div id="shade-a" class="shade"></div>
+        </div>
+        <div id="card-b" class="card">
+          <div id="zoom-b" class="zoom"><img src="assets/129.jpg" alt="Connex staff focus groups" /></div>
+        </div>
+      </div>
+      <div id="callout">
+        <div id="co-card">
+          <div id="co-tag">Hillcrest Christian College</div>
+          <div id="co-head"><span class="wm"><span class="w">Implemented</span></span> <span class="wm"><span class="w">college</span></span> <span class="wm"><span class="w">software</span></span> <span class="wm"><span class="w">such</span></span> <span class="wm"><span class="w">as</span></span> <span class="wm"><span class="w">Connex</span></span></div>
+          <div id="co-labels">
+            <div id="label-a" class="co-label">Connex open to families</div>
+            <div id="label-b" class="co-label">Connex staff focus groups, Term 1</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const RISE = 820;
+
+      // Card A (130): rises from behind the mask, holds tight on "06 ... Connex open to families", then blows out.
+      gsap.set("#zoom-a", { transformOrigin: "73% 79%" });
+      tl.fromTo("#card-a", { y: RISE }, { y: 0, duration: 0.7, ease: "power3.out" }, 0);
+      tl.fromTo("#zoom-a", { scale: 2.2 }, { scale: 1, duration: 1.6, ease: "power3.inOut" }, 1.0);
+      tl.to("#zoom-a", { scale: 1.035, duration: 4.1, ease: "none" }, 2.6); // slow push-in through the hold
+
+      // Callout: card eases up 14 px and fades in (DESIGN.md), words rise one by one.
+      tl.fromTo("#co-card", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0.45);
+      tl.fromTo("#co-head .w", { yPercent: 110 }, { yPercent: 0, duration: 0.5, ease: "power3.out", stagger: 0.07 }, 0.55);
+      tl.fromTo("#label-a", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 1.3);
+
+      // Card B (129): rises over A at 572.1 s (t 6.7); A steps back and darkens slightly; B blows out from its heading.
+      gsap.set("#card-a", { transformOrigin: "50% 0%" });
+      gsap.set("#zoom-b", { transformOrigin: "50% 9%" });
+      tl.fromTo("#card-b", { y: RISE }, { y: 0, duration: 0.7, ease: "power3.out" }, 6.7);
+      tl.to("#card-a", { scale: 0.94, y: -22, duration: 0.7, ease: "power3.out" }, 6.7);
+      tl.fromTo("#shade-a", { opacity: 0 }, { opacity: 0.35, duration: 0.7, ease: "power2.out" }, 6.7);
+      tl.fromTo("#zoom-b", { scale: 2.0 }, { scale: 1, duration: 1.6, ease: "power3.inOut" }, 7.6);
+      tl.to("#zoom-b", { scale: 1.035, duration: 2.55, ease: "none" }, 9.2); // slow push-in through the hold
+      tl.to("#label-a", { opacity: 0, y: -10, duration: 0.25, ease: "power2.in" }, 6.9);
+      tl.fromTo("#label-b", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 7.15);
+
+      // Out: everything leaves together before 12.1 s.
+      tl.to("#stage", { opacity: 0, duration: 0.35, ease: "power2.in" }, 11.75);
+      tl.to("#co-card", { opacity: 0, duration: 0.3, ease: "power2.in" }, 11.8);
+
+      window.__timelines["connex"] = tl;
+    </script>
+  </body>
+</html>
