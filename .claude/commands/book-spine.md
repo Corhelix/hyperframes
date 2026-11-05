@@ -51,10 +51,12 @@ The spine (`spine.yaml`) is the source of truth. You cannot detect drift without
 You are about to drift if you are:
 - Drafting a missing chapter (Phase 5) before the spine and canon are settled → **WRITE-FIRST DRIFT**. Reconcile first. Always.
 - Silently picking which draft is canonical instead of surfacing candidates for the author → **CANON HIJACK**. Phase 2 proposes; the human decides.
-- Auto-rewording a locked line, or waving through a reworded one as a style choice → **LOCKED-LINE BREACH**. Locked lines are verbatim. An altered one is a Critical finding.
+- Treating the author's phrases as required lines (inserting them because they are on a list, checking for them, or flagging a reworded or missing one) → **CHECKLIST DRIFT**. Phrases are context, used where a section earns them. There are no verbatim-mandated lines (Andrew, 2026-10-24).
+- Running a continuity or verification pass as a checklist before reading the whole book as its reader → **CHECKLIST DRIFT**. Story first, mechanics last.
+- Treating earlier drafts as competing canon when the author has approved a new flow or spine → **CANON MISREAD**. The approved spine wins; older drafts are raw material, mapped to its beats through /book-forge triage.
 - Auto-fixing a contradiction the continuity pass found → **OVER-REACH**. Phase 4 reports; the author resolves.
 - Summarising a phase reference file instead of reading it in full → **FLATTENING**. The reference files are the authority.
-- Inventing a beat, claim or locked line the source doesn't support to make the outline look complete → **FABRICATION**. Recover, or mark a gap. Never paper over.
+- Inventing a beat, claim or phrase the source doesn't support to make the outline look complete → **FABRICATION**. Recover, or mark a gap. Never paper over.
 - Producing reconciled prose without inline provenance markers → **UNTRACEABLE MERGE**. Every paragraph keeps its `<!--src:-->` origin.
 
 If any apply → stop, go back, read the relevant phase reference file in full.
@@ -68,7 +70,8 @@ Common excuses for cutting corners in /book-spine, with rebuttals.
 | Thought | Reality |
 |---|---|
 | "I can see which version is best, I'll just use it." | The author knows things you don't (which draft a board saw, which line a stakeholder loves). Surface candidates with evidence; let them pick. |
-| "This locked line reads better slightly reworded." | A locked line is locked because someone decided it. Changing it is a spine edit made explicitly, not a quiet improvement. |
+| "This phrase from the outline has to appear word for word." | Phrases are the author's context notes, not code. Use one where the section earns it, in words that fit, or leave it out. |
+| "I'll run the dimensions and report what I find." | A report built from a checklist says what you noticed, not whether the book works. Read it whole as its reader first, and interpret; never hand back a ledger. |
 | "The book's mostly here, I'll draft the missing chapter now to keep momentum." | A chapter drafted before canon is settled becomes the next thing to reconcile. Phase 5 is last for a reason. |
 | "The continuity report is obvious, I'll just fix the contradictions." | Auto-resolving can erase a deliberate tension or pick the wrong side of a real disagreement. Report, don't decide. |
 | "Provenance comments are clutter." | They are the audit trail that makes every merge reversible. Strip them only at final export. |
@@ -80,7 +83,8 @@ Stop signs. If any is true, recover before continuing.
 
 - A chapter was drafted (Phase 5) while its canon was still `candidate`/`needs_review`
 - `primary_version_key` was set without an author decision and a `reconciliation_note`
-- A locked line is missing or altered in the reconciled manuscript and not logged Critical
+- A phrase was inserted or enforced because it was on a list, not because the section earned it
+- A continuity or verification report opens with a checklist instead of the story read, or reads as a ledger of statuses
 - Reconciled prose has no `<!--src:-->` provenance markers
 - The continuity gate was marked passed with open Critical findings
 - The fresh-reader verification (Phase 6) was run by an agent that already knew the reconciliation
@@ -101,6 +105,8 @@ Phase 5 → ~/.claude/skills/book-spine/references/phase-5-gapfill.md
 Phase 6 → ~/.claude/skills/book-spine/references/phase-6-verify.md
 ```
 
+Paths resolve in order: `~/.claude/skills/book-spine/` on the operator's machine, then `Corhelix/Agent-and-Config-Files` `skills/writing/book-spine/`, then the source in `Corhelix/claude-system` `global/skills/book-spine/`. In a cloud or iOS session the first does not exist; use the second.
+
 Output shapes live in `~/.claude/skills/book-spine/templates/`. The recovery-detail bar is set by `~/.claude/skills/book-spine/examples/wsmib-spine.example.yaml`.
 
 ---
@@ -112,6 +118,7 @@ Read the Phase 0 reference. Establish the job first:
 1. **Which book / manuscript?** (title, and where the fragments live)
 2. **Working folder?** (the book's task folder — all artifacts go there, not in the skill)
 3. **Entry mode?** (reconcile a mess → run 0→6; or maintain a clean book → re-run a single phase)
+4. **Has the author approved a flow or spine?** If yes, that document is the authority the book is held against. Earlier spines and drafts are raw material for it: map them to its beats through /book-forge triage (every piece by file and line range) instead of running Phase 2 canon selection over them.
 
 Then run Phase 0 per the reference file. Output: `fragments.json` + extracted text for every non-markdown fragment.
 
@@ -124,10 +131,10 @@ Wait for response.
 
 ## Phase 1 — SPINE RECONSTRUCTION
 
-Read the Phase 1 reference. Recover `spine.yaml` from the strongest existing outline (a master-outline PDF is gold). Transcribe locked lines verbatim, recover the voice note, mark gaps and inferred fields honestly.
+Read the Phase 1 reference. Recover `spine.yaml` from the strongest existing outline (a master-outline PDF is gold). Record the author's phrases with their sources as context (never as mandated lines), recover the voice note, mark gaps and inferred fields honestly.
 
 **GATE — present the spine before Phase 2:**
-> Spine rebuilt: [N] chapters, [M] gaps, [K] locked lines recovered. Sanity-check the structure before I touch the drafts?
+> Spine rebuilt: [N] chapters, [M] gaps, [K] phrases recorded as context. Sanity-check the structure before I touch the drafts?
 
 Wait for response. This is the cheapest moment to fix a structural misread.
 
@@ -135,7 +142,7 @@ Wait for response. This is the cheapest moment to fix a structural misread.
 
 ## Phase 2 — CANON SELECTION
 
-Read the Phase 2 reference. Group competing drafts into version families, run the candidate detector (beat/locked-line coverage, recency, completeness, partial-refresh flags), and present each non-trivial family to the author with a recommendation and one line of reasoning.
+Read the Phase 2 reference. Group competing drafts into version families, run the candidate detector (beat coverage, recency, completeness, partial-refresh flags), and present each non-trivial family to the author with a recommendation and one line of reasoning.
 
 **GATE — per family (or batched):** the author sets `primary_version_key` + `reconciliation_note`. Use AskUserQuestion for the picks. The tool never auto-decides.
 
@@ -151,7 +158,7 @@ Read the Phase 3 reference. Build one `chapters/NN-slug.md` per chapter from the
 
 ## Phase 4 — CONTINUITY & CONTRADICTION (mandatory gate)
 
-Read the Phase 4 reference. Check the assembled manuscript against the spine across the six dimensions (locked-line integrity, claim consistency, term drift, evidence conflict, broken bridges, beat coverage). Emit `continuity-report.md` with severity-tiered, advisory findings.
+Read the Phase 4 reference. Read the assembled manuscript start to finish as its reader first, and open the report with that story read: where it lands, where the reader is lost, whether one spine carries through. Then check it against the spine across six dimensions (claim consistency, term drift, evidence conflict, broken bridges, beat coverage, phrase placement). Emit `continuity-report.md` with severity-tiered, advisory findings.
 
 **GATE:** present the report. The author resolves. Re-run up to 3 rounds; if Criticals remain, log them as "unresolved at sign-off" rather than marking the gate passed.
 
@@ -159,7 +166,7 @@ Read the Phase 4 reference. Check the assembled manuscript against the spine acr
 
 ## Phase 5 — GAP-FILL DRAFTING (last)
 
-Read the Phase 5 reference. Draft only gap/weak sections, to the spine contract (purpose, lead, verbatim locked lines, beats in order, bridge, book voice). Tag new prose `<!--src: drafted-->`. Re-run Phase 4 on each new section. Never silently touch a settled chapter.
+Read the Phase 5 reference. Draft only gap/weak sections, to the spine contract (purpose, lead, beats in order built from their recorded sources, bridge, book voice; the author's phrases only where a section earns them). Tag new prose `<!--src: drafted-->`. Re-run Phase 4 on each new section. Never silently touch a settled chapter.
 
 ---
 
@@ -190,7 +197,8 @@ The reconciled `chapters/` + `spine.yaml` are the deliverable. `passport.yaml` l
 
 - It does NOT generate a book from a blank page. It reconciles drafts that already exist.
 - It does NOT decide which draft is canonical. It proposes; the author confirms.
-- It does NOT auto-fix contradictions or reword locked lines. It reports; the author resolves.
+- It does NOT auto-fix contradictions. It reports; the author resolves.
+- It does NOT enforce, count or check the author's phrases. They are context, not code.
 - It does NOT render the final book to PDF/HTML — hand the reconciled `chapters/` to `document-publishing/pdf-report` for that.
 
 ---

@@ -17,6 +17,7 @@ contract:
     always:
       - viewports/cmo.md
       - command-includes/_VERIFICATION-STANDARD.md
+      - command-includes/_CAPABILITY-REGISTER.md
       - skills/digital-marketing/creative-toolkit.md
       - knowledge-bank/marketing-and-gtm.md
       - knowledge-bank/strategy-foundations.md
@@ -227,13 +228,16 @@ The Agentive Learning System audit (`reports/daily/2026-05-13.md`) found that 12
 5. `skills/digital-marketing/marketing-psychology/SKILL.md` — mental models, persuasion frameworks
 6. `skills/digital-marketing/conversion-copywriting/SKILL.md` — copy quality rules, benefits > features
 7. `skills/copywriting/Proofread-Anti-AI-Standard.md` — 3-pass writing proof, mandatory on all output
+8. `command-includes/_CAPABILITY-REGISTER.md` — which plugin skill, agent or tool we prefer for design, layout, charts, video, UX copy and brand-voice checks, what outranks a plugin, and which plugins are project-only or under review. Plugin skills never replace the entity's locked lines or the anti-AI standard.
 
 Path resolution: `skills/`, `knowledge-bank/` and `protocols/` are in `Corhelix/Agent-and-Config-Files`. Read them from GitHub `origin/main` with `gh api "repos/Corhelix/<repo>/contents/<path>?ref=main" --jq .content | base64 -d`, never from a local checkout (`protocols/how-we-work.md`).
 
-**GATE — present after the 7 reads complete:**
+**GATE — present after the 8 reads complete:**
 > Skill pack loaded: creative-toolkit + 5 lenses + anti-AI standard. Tactical skills available on-demand per creative-toolkit's selector logic.
+>
+> Capability routes used: [route ids, or none].
 
-Then proceed to Phase 1. Do NOT proceed before all 7 files are loaded. The skills-gate hook will deny Edit/Write until you have proposed skills; the proposal stage in Phase 3 will pull from this loaded set.
+Then proceed to Phase 1. Do NOT proceed before all 8 files are loaded. The skills-gate hook will deny Edit/Write until you have proposed skills; the proposal stage in Phase 3 will pull from this loaded set.
 
 **If a file is missing or unreadable:** flag it explicitly (`MISSING: skills/digital-marketing/creative-toolkit.md`) and continue — do not silently skip. A missing lens file is a system bug to be fixed, not a reason to operate without it.
 
