@@ -49,11 +49,16 @@ def main():
     m = Image.new("L", (HW, HH), 0); ImageDraw.Draw(m).rounded_rectangle((0, 0, HW - 1, HH - 1), radius=28, fill=255)
     m.save(work / "headmask.png")
     inputs = ["-i", str(a.base), "-loop", "1", "-framerate", "24", "-i", str(work / "headmask.png")]
+    rhs = L.get("layout") == "rhs_all"                  # speaker small on the right for every section, white canvas throughout
+    if rhs:
+        Image.new("RGB", (1920, 1080), BG["white"]).save(work / "bg.png")
+        inputs += ["-loop", "1", "-framerate", "24", "-i", str(work / "bg.png")]
+    first = 3 if rhs else 2
     for k, s in enumerate(slides):
         p = work / f"slide{k + 1:02d}.png"
         canvas(Path(a.slides) / s["file"], s["bg"], p)
         inputs += ["-loop", "1", "-framerate", "24", "-i", str(p)]
-    first_call = 2 + len(slides)
+    first_call = first + len(slides)
     for c in callouts:
         inputs += ["-c:v", "libvpx-vp9", "-i", str(Path(a.callouts) / f"{c['id']}.webm")]
 
@@ -66,11 +71,14 @@ def main():
           f"[hsrc]crop=960:1080:480:0,scale={HW}:{HH},format=rgba[hs]",
           f"[1:v]format=gray,scale={HW}:{HH}[mk]", "[hs][mk]alphamerge[head]"]
     cur = "[base]"
-    for k, s in enumerate(slides):
-        fc.append(f"{cur}[{k + 2}:v]overlay=0:0:enable='between(t,{s['out_in']},{s['out_out']})':shortest=0[v{k}]")
+    if rhs:
+        fc.append("[base][2:v]overlay=0:0:shortest=0[bgv]"); cur = "[bgv]"
+    for k, s in enumerate(slides):                       # 0.3 s fades in and out, so a slide never flashes on or off
+        fc.append(f"[{k + first}:v]format=rgba,fade=t=in:st={s['out_in']}:d=0.3:alpha=1,fade=t=out:st={s['out_out'] - 0.3:.3f}:d=0.3:alpha=1[sf{k}]")
+        fc.append(f"{cur}[sf{k}]overlay=0:0:enable='between(t,{s['out_in']},{s['out_out'] + 0.01})':shortest=0[v{k}]")
         cur = f"[v{k}]"
     en = "+".join(f"between(t,{s['out_in']},{s['out_out']})" for s in slides)
-    fc.append(f"{cur}[head]overlay={HX}:{HY}:enable='{en}':shortest=0[vp]")
+    fc.append(f"{cur}[head]overlay={HX}:{HY}" + ("" if rhs else f":enable='{en}'") + ":shortest=0[vp]")
     cur = "[vp]"
     for k, c in enumerate(callouts):
         i = first_call + k
