@@ -177,7 +177,7 @@ B.stack = (s, A) => {
   let cards = "", js = "";
   s.items.forEach((it, i) => {
     const next = i < n - 1 ? s.items[i + 1].rel : D;
-    cards += `<div id="k${i}" class="card" style="left:0;top:${AY}px;width:${AW}px;height:${AH}px;background:${bgOf(it)}"><div id="z${i}" class="zoom">${media(it, "m" + i, it.rel, (it.vid ? next - it.rel + 0.8 : D), A)}</div><div id="h${i}" class="shade"></div></div>`;
+    cards += `<div id="k${i}" class="card" style="left:0;top:${AY}px;width:${AW}px;height:${AH}px;background:${bgOf(it)}"><div id="z${i}" class="zoom">${media(it, "m" + i, it.rel, (it.vid ? Math.min(next - it.rel + 0.8, D - it.rel) : D), A)}</div><div id="h${i}" class="shade"></div></div>`;
     js += `gsap.set("#k${i}",{transformOrigin:"50% 0%"});\n`;
     js += `tl.fromTo("#k${i}",{y:820},{y:0,duration:0.7,ease:"power3.out"},${r2(it.rel)});\n`;
     for (let j = Math.max(0, i - 2); j < i; j++) {
@@ -212,7 +212,7 @@ B.feature = (s, A) => {
       inner = `<img class="m" src="assets/${item.poster}" style="object-fit:cover" alt="" />`;
       turns.forEach((tn, q) => {
         const idx = s.items.indexOf(tn), next = idx < s.items.length - 1 ? s.items[idx + 1].rel : D;
-        inner += `<video id="v${i}_${q}" class="m" src="assets/${item.vid}.mp4" muted playsinline data-start="${r2(tn.rel)}" data-duration="${r2(next - tn.rel + 0.4)}" data-media-start="${item.mediaStart || 0}" style="object-fit:cover"></video>`;
+        inner += `<video id="v${i}_${q}" class="m" src="assets/${item.vid}.mp4" muted playsinline data-start="${r2(tn.rel)}" data-duration="${r2(Math.min(next - tn.rel + 0.4, D - tn.rel))}" data-media-start="${item.mediaStart || 0}" style="object-fit:cover"></video>`;
       });
     } else inner = media(item, "m" + i, 0, D, A);
     html += `<div id="f${i}" class="card" style="left:${L}px;top:${T}px;width:${W}px;height:${H}px;background:${bgOf(item)}">${inner}</div>`;
@@ -321,7 +321,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:transparent}
 .coh.quote{font-weight:600;font-style:italic}
 .col{font-family:"Montserrat",sans-serif;font-weight:400;font-size:30px;line-height:1.25;color:#3b4252;margin-top:12px}`;
 
-const page = (id, title, body, js) => `<!doctype html>
+const page = (id, title, body, js, dur) => `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -332,7 +332,7 @@ const page = (id, title, body, js) => `<!doctype html>
     <style>${CSS}</style>
   </head>
   <body>
-    <div id="root" data-composition-id="${id}" data-start="0" data-width="1920" data-height="1080">
+    <div id="root" data-composition-id="${id}" data-start="0" data-width="1920" data-height="1080" data-duration="${dur}">
 ${body}
     </div>
     <script>
@@ -358,7 +358,7 @@ function emit(id, title, start, dur, built, assets, track) {
   }
   // Pad the timeline to the exact length so the render is exactly `dur` seconds.
   const js = `${built.js}\ntl.set({}, {}, ${r2(dur)});`;
-  fs.writeFileSync(path.join(dir, "index.html"), page(id, title, built.html, js));
+  fs.writeFileSync(path.join(dir, "index.html"), page(id, title, built.html, js, r2(dur)));
   manifest.push({ id, title, start: r2(start), dur: r2(dur), frame: 86400 + Math.round(start * FPS), track });
 }
 

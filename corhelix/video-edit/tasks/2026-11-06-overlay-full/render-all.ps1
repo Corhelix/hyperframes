@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$Out,
   [string[]]$Only = @()
 )
+$Only = @($Only | ForEach-Object { $_ -split ',' } | Where-Object { $_ })
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $scenes = Get-Content (Join-Path $here 'scenes.json') -Raw | ConvertFrom-Json
 New-Item -ItemType Directory -Force $Out | Out-Null
