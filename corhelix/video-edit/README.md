@@ -15,6 +15,7 @@ The scripts the SOP runs.
 | `render_exact.py` | Runs video-use render.py unchanged but caps each segment at its exact frame count, so the output matches the EDL sum (V6). Use frame-aligned EDL ranges | Used on the 4 Nov take |
 | `build_layers.py` | Stage 11: turns a layer plan, the EDL and the Scribe words into layers.json, landing each layer on its spoken word and checking the SOP copy and hold rules | Used on the 4 Nov take |
 | `gap_sheets.py` | Builds gridded every-frame contact sheets for long gaps, read by eye | Built (PR 20) |
+| `script_lock.py` | The cut gate. Every span the EDL removes must be a repeated redo, join padding under 0.3 s, or covered by one of Andrew's own words in `authorisations.json`. Also fails a cut inside a word and reordered ranges. Tests: `python3 -m unittest test_script_lock` from `current/` | Built (PR 1 of 3 for /video-edit) |
 | `layers_to_xml.py` | Turns edl.json, layers.json and subtitles.json into FCPXML, xmeml and EDL, with text kept as text | To build |
 | `check_layers.py` | Verifies the composited draft, V1 to V7: every join, layer and subtitle. Head position on a join stays a human read; the script flags it | Built, used on the 4 Nov take |
 | `grade_match.py` | Sample, measure, correct, test slices, recheck | To build |
