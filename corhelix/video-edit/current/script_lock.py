@@ -30,7 +30,7 @@ import sys
 TOL = 0.06            # seconds: a range edge this close to a word edge counts as on it
 REDO_MIN_WORDS = 3    # opening words that must repeat when the speaker gave no cue
 CUES = {"redo"}       # spoken cue words
-SILENCE_TOL = 0.3     # seconds of pure silence treated as join padding (proposed, Andrew to confirm)
+SILENCE_TOL = 0.3     # seconds of pure silence treated as join padding (confirmed by Andrew, 5 Nov 2026)
 
 
 def norm(text):
