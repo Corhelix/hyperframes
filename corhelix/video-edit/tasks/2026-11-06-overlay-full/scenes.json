@@ -1,0 +1,434 @@
+[
+ {
+  "id": "s01",
+  "title": "s01 blowout",
+  "start": 38.56,
+  "dur": 12,
+  "frame": 87325,
+  "track": "scene"
+ },
+ {
+  "id": "s02",
+  "title": "s02 thumbs",
+  "start": 56.58,
+  "dur": 17.28,
+  "frame": 87758,
+  "track": "scene"
+ },
+ {
+  "id": "s03",
+  "title": "s03 deck",
+  "start": 73.96,
+  "dur": 7.4,
+  "frame": 88175,
+  "track": "scene"
+ },
+ {
+  "id": "s04",
+  "title": "s04 stack",
+  "start": 85.74,
+  "dur": 24.2,
+  "frame": 88458,
+  "track": "scene"
+ },
+ {
+  "id": "s05",
+  "title": "s05 full",
+  "start": 113,
+  "dur": 6,
+  "frame": 89112,
+  "track": "scene"
+ },
+ {
+  "id": "s06",
+  "title": "s06 blowout",
+  "start": 131.79,
+  "dur": 6,
+  "frame": 89563,
+  "track": "scene"
+ },
+ {
+  "id": "s07",
+  "title": "s07 full",
+  "start": 142,
+  "dur": 6,
+  "frame": 89808,
+  "track": "scene"
+ },
+ {
+  "id": "s08",
+  "title": "s08 full",
+  "start": 152.5,
+  "dur": 8,
+  "frame": 90060,
+  "track": "scene"
+ },
+ {
+  "id": "s09",
+  "title": "s09 deck",
+  "start": 162.79,
+  "dur": 8,
+  "frame": 90307,
+  "track": "scene"
+ },
+ {
+  "id": "s10",
+  "title": "s10 quote",
+  "start": 183.36,
+  "dur": 8,
+  "frame": 90801,
+  "track": "scene"
+ },
+ {
+  "id": "s12",
+  "title": "s12 quote",
+  "start": 203.3,
+  "dur": 8,
+  "frame": 91279,
+  "track": "scene"
+ },
+ {
+  "id": "s13",
+  "title": "s13 pan",
+  "start": 226.16,
+  "dur": 8,
+  "frame": 91828,
+  "track": "scene"
+ },
+ {
+  "id": "s14",
+  "title": "s14 blowout",
+  "start": 242.42,
+  "dur": 6,
+  "frame": 92218,
+  "track": "scene"
+ },
+ {
+  "id": "s15",
+  "title": "s15 full",
+  "start": 258.5,
+  "dur": 8,
+  "frame": 92604,
+  "track": "scene"
+ },
+ {
+  "id": "s16",
+  "title": "s16 feature",
+  "start": 271.29,
+  "dur": 30.68,
+  "frame": 92911,
+  "track": "scene"
+ },
+ {
+  "id": "s17",
+  "title": "s17 cylinder",
+  "start": 302.3,
+  "dur": 8.09,
+  "frame": 93655,
+  "track": "scene"
+ },
+ {
+  "id": "s17b",
+  "title": "s17b cylinder",
+  "start": 324.9,
+  "dur": 9.17,
+  "frame": 94198,
+  "track": "scene"
+ },
+ {
+  "id": "s18",
+  "title": "s18 pan",
+  "start": 351.93,
+  "dur": 6,
+  "frame": 94846,
+  "track": "scene"
+ },
+ {
+  "id": "s19",
+  "title": "s19 blowout",
+  "start": 364.1,
+  "dur": 6,
+  "frame": 95138,
+  "track": "scene"
+ },
+ {
+  "id": "s20",
+  "title": "s20 feature",
+  "start": 386.7,
+  "dur": 39.54,
+  "frame": 95681,
+  "track": "scene"
+ },
+ {
+  "id": "s21",
+  "title": "s21 stack",
+  "start": 437.34,
+  "dur": 18.9,
+  "frame": 96896,
+  "track": "scene"
+ },
+ {
+  "id": "s22",
+  "title": "s22 pan",
+  "start": 468.79,
+  "dur": 9.05,
+  "frame": 97651,
+  "track": "scene"
+ },
+ {
+  "id": "s23",
+  "title": "s23 full",
+  "start": 481.5,
+  "dur": 6,
+  "frame": 97956,
+  "track": "scene"
+ },
+ {
+  "id": "s24",
+  "title": "s24 deck",
+  "start": 500.82,
+  "dur": 10.58,
+  "frame": 98420,
+  "track": "scene"
+ },
+ {
+  "id": "s25",
+  "title": "s25 stack",
+  "start": 518.16,
+  "dur": 13.24,
+  "frame": 98836,
+  "track": "scene"
+ },
+ {
+  "id": "s26",
+  "title": "s26 thumbs",
+  "start": 533.26,
+  "dur": 12.74,
+  "frame": 99198,
+  "track": "scene"
+ },
+ {
+  "id": "s27",
+  "title": "s27 pan",
+  "start": 553.82,
+  "dur": 8.68,
+  "frame": 99692,
+  "track": "scene"
+ },
+ {
+  "id": "s28",
+  "title": "s28 stack",
+  "start": 565.4,
+  "dur": 11.7,
+  "frame": 99970,
+  "track": "scene"
+ },
+ {
+  "id": "s29",
+  "title": "s29 blowout",
+  "start": 588.84,
+  "dur": 3.7,
+  "frame": 100532,
+  "track": "scene"
+ },
+ {
+  "id": "s30",
+  "title": "s30 feature",
+  "start": 596.68,
+  "dur": 16.82,
+  "frame": 100720,
+  "track": "scene"
+ },
+ {
+  "id": "s31",
+  "title": "s31 stack",
+  "start": 653.92,
+  "dur": 17.78,
+  "frame": 102094,
+  "track": "scene"
+ },
+ {
+  "id": "s32",
+  "title": "s32 blowout",
+  "start": 681.31,
+  "dur": 8,
+  "frame": 102751,
+  "track": "scene"
+ },
+ {
+  "id": "s33",
+  "title": "s33 feature",
+  "start": 699.03,
+  "dur": 13.57,
+  "frame": 103177,
+  "track": "scene"
+ },
+ {
+  "id": "s34",
+  "title": "s34 cylinder",
+  "start": 721.2,
+  "dur": 24.18,
+  "frame": 103709,
+  "track": "scene"
+ },
+ {
+  "id": "s35",
+  "title": "s35 thumbs",
+  "start": 757.41,
+  "dur": 8,
+  "frame": 104578,
+  "track": "scene"
+ },
+ {
+  "id": "co-c01",
+  "title": "C01 Digital Marketing & Product Specialist",
+  "start": 37.77,
+  "dur": 4,
+  "frame": 87306,
+  "track": "callout"
+ },
+ {
+  "id": "co-c02",
+  "title": "C02 70+ audits",
+  "start": 55.53,
+  "dur": 3,
+  "frame": 87733,
+  "track": "callout"
+ },
+ {
+  "id": "co-c03",
+  "title": "C03 Donate Life: over $1 million ad spend",
+  "start": 61.29,
+  "dur": 4.34,
+  "frame": 87871,
+  "track": "callout"
+ },
+ {
+  "id": "co-c04",
+  "title": "C04 14 key account managers",
+  "start": 65.83,
+  "dur": 3.1,
+  "frame": 87980,
+  "track": "callout"
+ },
+ {
+  "id": "co-c05",
+  "title": "C05 Trained account managers to sell with confidence",
+  "start": 115.66,
+  "dur": 3.1,
+  "frame": 89176,
+  "track": "callout"
+ },
+ {
+  "id": "co-c06",
+  "title": "C06 …tirelessly to support and upskill his team",
+  "start": 150.58,
+  "dur": 5.2,
+  "frame": 90014,
+  "track": "callout"
+ },
+ {
+  "id": "co-c07",
+  "title": "C07 Working with long-term clients, 2+ years",
+  "start": 203.31,
+  "dur": 3,
+  "frame": 91279,
+  "track": "callout"
+ },
+ {
+  "id": "co-c08",
+  "title": "C08 $32 million key accounts",
+  "start": 286.36,
+  "dur": 3.7,
+  "frame": 93273,
+  "track": "callout"
+ },
+ {
+  "id": "co-c09",
+  "title": "C09 $648m to $1bn target",
+  "start": 335.22,
+  "dur": 3,
+  "frame": 94445,
+  "track": "callout"
+ },
+ {
+  "id": "co-c10",
+  "title": "C10 8% above target",
+  "start": 368.32,
+  "dur": 3.7,
+  "frame": 95240,
+  "track": "callout"
+ },
+ {
+  "id": "co-c11",
+  "title": "C11 General Manager, EdTech Division",
+  "start": 382.13,
+  "dur": 3.1,
+  "frame": 95571,
+  "track": "callout"
+ },
+ {
+  "id": "co-c12",
+  "title": "C12 1,400+ education clients",
+  "start": 394.99,
+  "dur": 3.1,
+  "frame": 95880,
+  "track": "callout"
+ },
+ {
+  "id": "co-c13",
+  "title": "C13 MWC Barcelona 2019",
+  "start": 467.85,
+  "dur": 3.7,
+  "frame": 97628,
+  "track": "callout"
+ },
+ {
+  "id": "co-c14",
+  "title": "C14 Gold Coast based",
+  "start": 486.21,
+  "dur": 3,
+  "frame": 98069,
+  "track": "callout"
+ },
+ {
+  "id": "co-c15",
+  "title": "C15 2,500+ users",
+  "start": 522.35,
+  "dur": 3,
+  "frame": 98936,
+  "track": "callout"
+ },
+ {
+  "id": "co-c16",
+  "title": "C16 30% enrolment growth",
+  "start": 533.29,
+  "dur": 3,
+  "frame": 99199,
+  "track": "callout"
+ },
+ {
+  "id": "co-x01",
+  "title": "X01 Implemented college software such as Connex",
+  "start": 565.9,
+  "dur": 3,
+  "frame": 99982,
+  "track": "callout"
+ },
+ {
+  "id": "co-c17",
+  "title": "C17 Content OS",
+  "start": 618.11,
+  "dur": 3.4,
+  "frame": 101235,
+  "track": "callout"
+ },
+ {
+  "id": "co-c18",
+  "title": "C18 Pro AV Solutions",
+  "start": 729.07,
+  "dur": 4,
+  "frame": 103898,
+  "track": "callout"
+ }
+]
