@@ -14,8 +14,8 @@ contract:
     - the ask is a video from scratch with generated footage -> the pletor or higgsfield routes
   loads:
     always:
-      - alc-group andrew-cockburn/content/video-edit-sop/ (latest DRAFT or APPROVED): How to run, Work order, Pauses and cuts, Verify and Scripts tabs
-      - Corhelix/hyperframes corhelix/video-edit/README.md
+      - Corhelix/video-edit sop/ (latest DRAFT or APPROVED): How to run, Work order, Pauses and cuts, Verify and Scripts tabs
+      - Corhelix/video-edit README.md (entry: where every piece is) and PINS.md
       - command-includes/_VERIFICATION-STANDARD.md
     conditional:
       - when: a callout is not a Hyperframes template
@@ -42,10 +42,10 @@ includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
 
 # /video-edit
 
-The method is the Video Edit SOP. The scripts are in `Corhelix/hyperframes` `corhelix/video-edit/current/`. The gates are the `video-edit-*` hooks (`global/hooks/README-video-edit-gates.md`), which run whether or not this file is remembered. If a gate holds a step, clear what it names. Do not work around it.
+The method is the Video Edit SOP. The home is `Corhelix/video-edit` (private): the SOP in `sop/`, the scripts in `current/`, the readiness check in `doctor/doctor.py`. The gates are the `video-edit-*` hooks (`global/hooks/README-video-edit-gates.md`), which run whether or not this file is remembered. If a gate holds a step, clear what it names. Do not work around it.
 
 ## Phase 0: Load
-Read the SOP tabs and the tool README listed under `loads`. Check the machine (`ffmpeg`, `ffprobe`, `~/Documents/video-use`, `uv`). Media stays in `~/Movies/<date>-<slug>/` and is never committed. Documents go to GitHub through the API.
+Read the SOP tabs and the home README listed under `loads`. Run `python doctor/doctor.py` from a clone of `Corhelix/video-edit`; do not start until it says GO. It checks the machine (`ffmpeg`, `ffprobe`, `~/Documents/video-use`, `uv`), the pins and the gates. Media stays in `~/Movies/<date>-<slug>/` and is never committed. Documents go to GitHub through the API.
 
 ## Phase 1: Work order
 Fill in the SOP Work order for this recording (format, look, subtitles, XML, screen mix, extra sources) and confirm it with Andrew before anything is cut. Stage 01: confirm the file by its time and first minute. Write `brief.json` and `FILES.md`.
