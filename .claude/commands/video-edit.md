@@ -14,8 +14,9 @@ contract:
     - the ask is a video from scratch with generated footage -> the pletor or higgsfield routes
   loads:
     always:
-      - Corhelix/video-edit sop/ (latest DRAFT or APPROVED): How to run, Work order, Pauses and cuts, Verify and Scripts tabs
-      - Corhelix/video-edit README.md (entry: where every piece is) and PINS.md
+      - Corhelix/video-edit:sop/DRAFT-VIDEO-EDIT-SOP-v0.7-2026-11-06.html@main # How to run, Work order, Pauses and cuts, Verify and Scripts tabs; use the latest DRAFT or APPROVED file in sop/ and update this line when it changes
+      - Corhelix/video-edit:README.md@main # entry: where every piece is
+      - Corhelix/video-edit:PINS.md@main
       - command-includes/_VERIFICATION-STANDARD.md
     conditional:
       - when: a callout is not a Hyperframes template
