@@ -115,6 +115,20 @@ Ranked report: wasted-spend / QS / pacing findings plus build-standard gaps from
 
 ---
 
+## Client access guides (when the client has not yet shared an account)
+
+When the request is an access guide, an advert guide, "how does the client give us access", or an account cannot be reached because the client has not shared it, do not write new steps. Use the Wolf & Eagle client access kit.
+
+- **Kit, the one source:** `Corhelix/alc-group` `companies/wolf-and-eagle/sops/2026-11-03-client-access-sop/`, latest `DRAFT-` or `APPROVED-` file (v0.3 as of 2026-11-09). Open it in Chrome, type the client name, tick the channels, then Print and Save as PDF. Query string: `?client=<Name>&channels=meta,gbp,ga4,gads,msads,bing`. With one channel ticked, the cover names that channel.
+- **Channels and levels:** Meta (full control of Page and ad account), Google Business Profile (Manager), Google Analytics (Editor), Google Ads (Admin), Microsoft Advertising (Standard User), Bing Places / Bing Maps (no invitation; it syncs from Google Business Profile).
+- **Invite email:** `andrew@wolfandeagle.agency` only. Never a gmail address.
+- **Microsoft Advertising rule:** the client signs up with the Microsoft 365 admin account for their business domain. A general mailbox on the domain will not work. Never name a specific admin address for the client.
+- **Rendered client packs:** `Corhelix/client-projects` `wolf-and-eagle/clients/<client>/tasks/<date>-<slug>/`, as `<Client>-Access-Guide.pdf` (full) plus `<Client>-<Channel>-Access-Guide.pdf` per channel. Worked example: `axia-office/tasks/2026-11-03-microsoft-ads-setup-guide/`.
+- **Agency side:** accounts of record (Google Ads MCC `7884229147` and the client links) are in `companies/wolf-and-eagle/sops/2026-11-09-client-connection-plan/README.md`.
+- Steps were checked against each platform's help text, not walked on a live account. Confirm on screen before the first send to a new client.
+
+---
+
 ## Shared blocks
 
 Declared in this command's `includes:`. Read the file when the situation arises.
