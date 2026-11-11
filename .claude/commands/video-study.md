@@ -2,23 +2,24 @@
 name: video-study
 description: Study reference videos for the video SOP engine, end to end, with independent audit and a done gate per video.
 argument-hint: "<YouTube links or local files, plus any supplied notes>  [batch: NN]"
+disable-model-invocation: true
 
 contract:
   writes: true
   fires_when:
     - one or more reference videos are supplied for the video SOP engine's research corpus
   does_not_fire_when:
-    - a video is to be turned into an SOP booklet or enhanced video (that is the engine itself, /video-sop, not yet built)
+    - a video is to be turned into an SOP booklet or enhanced video (that is /video-sop)
   loads:
     always:
-      - projects/video-sop-engine/SOP-reference-video-study.md
-      - projects/video-sop-engine/README.md
-      - projects/video-sop-engine/pipeline/CHANGELOG.md
-      - the newest projects/video-sop-engine/research/synthesis/*-synthesis.md
-      - the newest projects/video-sop-engine/drafts/DRAFT-video-sop-engine-plan-*.html (Goal, Callouts, Stills, Review, Batch sections)
-      - projects/video-sop-engine/research/2026-10-22-attention-cadence/README.md
-      - projects/video-sop-engine/prompts/segment-analyst-reference.md
-      - projects/video-sop-engine/templates/reference-report.md
+      - Corhelix/N8n-projects:projects/video-sop-engine/SOP-reference-video-study.md@main
+      - Corhelix/N8n-projects:projects/video-sop-engine/README.md@main
+      - Corhelix/N8n-projects:projects/video-sop-engine/pipeline/CHANGELOG.md@main
+      - Corhelix/N8n-projects:projects/video-sop-engine/research/synthesis/2026-10-22-batch-01-synthesis.md@main # the newest synthesis; update this line when a new batch synthesis lands
+      - Corhelix/N8n-projects:projects/video-sop-engine/drafts/DRAFT-video-sop-engine-plan-v0.4-2026-10-22.html@main # Goal, Callouts, Stills, Review, Batch sections; update this line when the plan is versioned
+      - Corhelix/N8n-projects:projects/video-sop-engine/research/2026-10-22-attention-cadence/README.md@main
+      - Corhelix/N8n-projects:projects/video-sop-engine/prompts/segment-analyst-reference.md@main
+      - Corhelix/N8n-projects:projects/video-sop-engine/templates/reference-report.md@main
   returns:
     - id: studies
       is: one folder per video under research/reference-videos/ that passes checks/validate_study.py
