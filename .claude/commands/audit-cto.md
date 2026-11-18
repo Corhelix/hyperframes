@@ -19,7 +19,7 @@ contract:
       - command-includes/_VERIFICATION-STANDARD.md
       - command-includes/_GOAL-FIRST-CONTRACT.md
       - command-includes/_HARNESS-STANDARD.md
-    skills: []   # names no skill; see _COMMAND-CONTRACT on Phase 0
+    skills: []   # this command loads no skills; the viewports and includes above are its whole load list
   returns:
     - id: findings
       is: each with an evidence path, a blast radius and a specific in-code mitigation
@@ -28,9 +28,10 @@ contract:
   acceptance:
     - the declared always-loads appear as Read calls in the transcript
     - every claim carries an evidence label per _VERIFICATION-STANDARD Lens 4
+    - the cmo-verify agent was run on the finished report in Phase 4 and its verdict is recorded
   graded_by: cmo-verify
 
-includes: [_GATE-MECHANICS, _BLOCKED-ACTION]
+includes: [_GATE-MECHANICS, _BLOCKED-ACTION, _COMMAND-CONTRACT]
 ---
 
 # /audit-cto — CTO Audit (7-check code/architecture audit)
@@ -102,7 +103,7 @@ it, the word is "untested", and it goes in the output.
 
 ---
 
-You ARE the accountable CTO running an audit, not a checklist. Every finding is decision-bearing — Andrew stamps LOCK/REVISE/DROP/DEFER on each one.
+You ARE the accountable CTO running an audit, not a checklist. Every finding is decision-bearing: it states what is wrong, how far it reaches and the specific fix. An audit reports what is true against a standard that is already settled, so it carries no LOCK / REVISE / DROP / DEFER register (repo CLAUDE.md, Output Conventions).
 
 ## Arguments
 
@@ -111,6 +112,15 @@ You ARE the accountable CTO running an audit, not a checklist. Every finding is 
 
 ## Phase 1 — Establish audit scope
 
+### 1.0 Arm the frame gate (before any analysis)
+`frame-gate-v1.sh` is inert until `.frame-required` exists, so write it first, using the marker directory the SessionStart hook injected (`command-includes/_GATE-MECHANICS.md`, "Arm the frame gate in Phase 1"):
+
+```
+{"kind":"system","codebase":"<path>","target":"<path>"}  ->  <session-marker-dir>/.frame-required
+```
+
+The 1.2 output below carries the four headings that gate reads for a system frame: Sources read, Goal, Success metric, Coverage. Write `.frame-locked` only when Phase 2 is complete (all seven checks run), never earlier.
+
 ### 1.1 Scope
 Identify: what is being audited, related project, and depth (quick gap-scan or full). Confirm scope before reading.
 
@@ -118,17 +128,21 @@ Identify: what is being audited, related project, and depth (quick gap-scan or f
 Read project structure, config, the patterns in the area being audited (naming, data fetching, error handling, auth, styling), existing specs, and the actual code in scope — every file, not a sample. Load only the technical lenses relevant to the audited surface.
 
 Output:
+- **Sources read** — every file opened, with its path
+- **Goal** — the one-sentence observable end state (see OPEN WITH THE GOAL)
+- **Success metric** — how a reader will know the audit was true
+- **Coverage** — what is in scope, what is not, and which lens is skipped and why
 - **THE SYSTEM** — what this is
 - **PATTERNS IN PLAY** — established conventions
 - **WHERE I'M AUDITING** — scope boundaries
 - **WHAT I'M CONCERNED ABOUT** — initial red flags
 
 ### 1.3 Checkpoint
-Present context. Confirm before running checks.
+Present context. Confirm before running checks. In a non-interactive run nobody can answer: record the checkpoint as UNCONFIRMED in the report, state the scope assumed, and continue.
 
 ## Phase 2 — Run the 7 checks (+ risks)
 
-Cite specific files/functions/lines for each. Each check returns PASS or FAIL with evidence.
+Cite specific files/functions/lines for each. Each check returns PASS, FAIL or UNTESTED, with evidence. PASS needs the thing to have been run and watched (a probe with an exit code, a query with a row count). A verdict reached by reading the source alone is UNTESTED, and the finding says so. Every claim carries one Lens 4 label: verified, documented but unverified, missing, stale or conflicting.
 
 **Check 1 — Pattern compliance.** Does the code follow established naming, data fetching, error handling, state management, and styling patterns? Are competing patterns introduced?
 
@@ -136,7 +150,9 @@ Cite specific files/functions/lines for each. Each check returns PASS or FAIL wi
 
 **Check 3 — Error handling.** Are failure paths real from the user's perspective? Is error handling proportional (not swallowed, not over-caught)? Do errors propagate useful context?
 
-**Check 4 — Security.** OWASP top 10 relevant to this surface. Input validation at boundaries. Auth/authz correct. No secrets in code. RLS policies if Supabase. XSS/injection if frontend.
+**Check 4 — Security.** OWASP top 10 relevant to this surface. Input validation at boundaries. Auth/authz correct. No secrets in code. XSS/injection if frontend.
+
+*If the surface uses Supabase,* read it live, read-only: `mcp__claude_ai_Supabase__list_tables` (RLS flag per table), `execute_sql` on `pg_policies` and the table grants, `get_advisors` (security), `list_migrations`, and `list_edge_functions` / `get_edge_function` against the repo copy. Never `apply_migration`, a branch tool, a deploy, a secret or any SQL that writes. Print the counts observed. A call that times out or is refused is recorded as UNCONFIGURED with the error verbatim and counted (calls made, calls failed); the RLS row is then UNTESTED, never PASS, and the repo's migrations are read as `documented but unverified`. A migration that carries a hard stop is read, not applied.
 
 **Check 5 — Over/under-engineering.** Is complexity proportional to the problem? Are there premature abstractions? Are there missing abstractions that will cause pain? TODOs or placeholders left behind?
 
@@ -144,7 +160,7 @@ Cite specific files/functions/lines for each. Each check returns PASS or FAIL wi
 
 **Check 7 — Definition of done.** Does it demonstrably work through all three lenses in VERIFICATION below — not builds-and-tests-pass, which is Lens 1 alone? Are tests present and meaningful? Can it be debugged? Can it be handed off?
 
-Use IDs: F# for findings (FAIL), G# for verified-sound (PASS), R# for risks.
+Use IDs: F# for findings (FAIL), G# for verified-sound (PASS), R# for risks. Every F# has an R# of its own; a finding without one is not finished. Probes are committed beside the report under `probes/` in the thread folder, with their exit codes, not left in scratch.
 
 ### Risk entries (for every FAIL or near-fail)
 - Likelihood (low/medium/high)
@@ -152,18 +168,20 @@ Use IDs: F# for findings (FAIL), G# for verified-sound (PASS), R# for risks.
 - Blast radius (component/module/system/user-facing)
 - Specific code-level mitigation
 
-## Phase 3 — Render decision-register HTML
+## Phase 3 — Render the findings report
 
-Open the canonical HTML-DECISION-TAGGING-PATTERN template and fill:
+Start from `alc-group/brand-ops/templates/CLARITY-OS-REPORT-TEMPLATE.html` (fixed banner, nav, type, colour; the content decides the sections). Set a unique `NOTES_KEY`. Do not add LOCK / REVISE / DROP / DEFER stamping, progress bars or per-row buttons: an audit reports defects, and open decisions are stated in prose. A tick-box fix checklist is allowed where each row is a unit of work tracked to done. Fill:
 - Header: AUDIT REPORT + system + type + date + author
-- Summary module: X/7 checks passed + overall verdict
-- One finding card per FAIL: check, what's wrong + file/line citations, evidence, specific fix, severity, LOCK/REVISE/DROP/DEFER row
+- Summary module: checks passed, failed and untested out of 7, plus the overall verdict
+- One finding card per FAIL: check, what is wrong with file and line citations, evidence path, specific fix, severity
 - Verified-sound cards (G#)
-- Risk cards (R#) with likelihood/impact/blast-radius/mitigation
-- Priority Fixes module: top 3 by blast radius x likelihood
+- Risk cards (R#) with likelihood, impact, blast radius, mitigation
+- Priority fixes: top 3 by blast radius x likelihood
 - Archive section
 
-Run the 3-pass proof on the report prose itself. Date-stamp DRAFT-AUDIT-CTO-v0.1.
+Where it is written: the owning repo's thread folder, `docs/tasks/YYYY-MM-DD-<slug>/` (or `projects/<area>/tasks/YYYY-MM-DD-<slug>/` for agent-OS work), per `protocols/filing-law.md`.
+
+Run the 3-pass proof on the report prose itself. Name it `DRAFT-AUDIT-CTO-v0.1-YYYY-MM-DD.html`.
 
 ## Phase 4 — Self-review (three-strike)
 
@@ -173,18 +191,20 @@ Read the report cold as the CTO:
 - Is severity honest (would a Critical actually break production)?
 - Could Andrew stamp every finding without re-reading the code?
 
-Verdict: PASS or REVISE. On REVISE within three strikes, return to Phase 3.
+Then run the declared grader: spawn the `cmo-verify` agent on the finished report with its source brief and evidence folder, and record its PASS or FAIL verdict and every point it raises in the report. A FAIL counts as a strike.
+
+Verdict: PASS or REVISE. On REVISE within three strikes, return to Phase 3. After three, deliver as it stands and state which points remain open.
 
 ## Phase 5 — Deliver
 
-Open the passed report in browser for stamping.
+Publish the report to GitHub (`scripts/publish-thread.sh`, a fresh branch and PR, nothing merged without Andrew's go), then open the local view copy at the same path under `~/Documents/CLEAN/<repo>/` in the browser for reading. Release `.frame-locked` only after Phase 2.
 
 ## Hard rules
 - Australian/UK English
 - No emojis — inline SVG icons
 - HTML for approval deliverables
 - Use CLARITY OS branded template
-- Cloud-only — never propose local-machine paths
+- GitHub is the base. Never propose a local path as the home of a deliverable; the CLEAN path is the view copy of the GitHub file, and the only local location allowed
 
 ---
 
@@ -221,7 +241,7 @@ survived. A contract honoured in the schema is not a contract honoured on the wi
 
 Every finding carries an evidence path; a defect nobody captured is a rumour. A lens
 is never skipped for want of a surface — it translates. Skipping one is a recorded
-decision naming which lens and why.
+decision naming which lens and why, written in the report's Coverage section.
 
 **Probes are artefacts, not scratch.** `command-includes/_HARNESS-STANDARD.md` carries
 the exit-code contract and the recurring probe types. Every check that can be a script
@@ -242,7 +262,7 @@ Audit the marks as well as the argument, against `alc-group/brand-ops/templates/
 | Node canvas misuse | the node model is used for a plain business process, or a plain process for real orchestration |
 | Wireframe headings | headings or body are set as real text rather than greyboxed |
 | Invented data | a figure, name or date the source never supplied is presented as real |
-| Wrong decision surface | a strategy or proposal carries a per-row stamp register, or an audit has no register at all |
+| Wrong decision surface | a strategy, proposal or audit carries a per-row stamp register |
 
 Each becomes a row in the register like any other finding.
 

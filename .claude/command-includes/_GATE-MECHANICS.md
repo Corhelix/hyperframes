@@ -1,6 +1,6 @@
-<!-- Source: .claude/commands/_GATE-MECHANICS.md — canonical. Inlined into every
-     command the hooks actually gate. If you change it here, change it in every
-     command that carries the block, and say so in the commit. -->
+<!-- Source: Corhelix/claude-system workspace/command-includes/_GATE-MECHANICS.md,
+     canonical. Commands declare it in their `includes:` front matter. If you change
+     it here, change the global/ copy, and say so in the commit. -->
 
 # Gate mechanics — what actually enforces these commands
 
@@ -15,11 +15,11 @@ frame gate, so `frame-gate-v1.sh` sat inert for the one command it was built for
 
 ## The four markers
 
-Per-session, under `<root>/.claude/sessions/<session_id>/`, where `<root>` is
-`$PROJECT_DIR/.claude` when the project has one, else
-`$HOME/Documents/DEFAULT-CLAUDE/.claude`. The SessionStart hook creates the
-directory and injects the exact paths into session context — use those, do not
-guess them.
+Per-session, under `~/.claude/state/gate-sessions/<session_id>/`, keyed on the
+session id alone. The SessionStart hook creates the directory and injects the exact
+paths into session context. Use those, do not guess them. (Corrected 2026-11-12: this
+file used to say `<root>/.claude/sessions/<session_id>/`, a location the gates no
+longer read.)
 
 | Marker | Written when | Gate that reads it |
 |---|---|---|
@@ -28,8 +28,9 @@ guess them.
 | `.frame-required` | **Phase 1, before any analysis** | `frame-gate-v1.sh` |
 | `.frame-locked` | all six analysis points complete | `frame-gate-v1.sh` |
 
-Legacy `.claude/.entity-loaded` and `.claude/.skills-approved` are **ignored**.
-Writing there satisfies nothing.
+Legacy `.claude/.entity-loaded`, `.claude/.skills-approved` and
+`<project>/.claude/sessions/` are **not read for proofs**. Writing there satisfies
+nothing.
 
 ## Arm the frame gate in Phase 1
 
