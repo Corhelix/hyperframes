@@ -1,6 +1,6 @@
 # _VERIFICATION-STANDARD — what "verified" means, for every command
 
-<!-- Include, not a command. Lives beside the commands, like _GATE-MECHANICS.md. v0.1 2026-08-21 -->
+<!-- Include, not a command. Lives beside the commands, like _GATE-MECHANICS.md. v0.2 2026-11-18 (v0.1 2026-08-21) -->
 <!-- This is a COMMON EXPECTATION, not a department concern. A designer does not own "check it in a
      browser" any more than a CTO owns "run the tests" — both are simply what verification means
      here. It is authored once, in this file, and referenced by every command that verifies
@@ -108,6 +108,22 @@ today is Not rechecked with last verified state Resolved, never a reopened defec
 **Separate four things when reporting progress:** actual repairs, newly verified evidence,
 regressions, and changes in coverage. A score that rose because more was checked is not an
 improvement. Do not claim progress because the open count shrank.
+
+## A finish line, and fit for purpose first
+
+Added 2026-11-18 after the AdIntel F9 evaluator ran 26 verification rounds. Rounds 15 to 25 found no defect in the code, only narrower test gaps, while every round passed findings that were wrong for the client: a Maximise Clicks campaign flagged critical for having no conversions, ROAS judged where no value was tracked, "spend up" flagged with no plan behind it. The operator: "are you logging or reacting? ie log all issues then build and fix OR was it your criteria to review wasn't good enough?" Both were true.
+
+**Log first.** Before a build, every issue class goes into one list. The build works that list once. Fixing round by round, one named case at a time, is reacting, not logging.
+
+**Criteria before the build, in the operator's words.** Acceptance criteria are fixed before any code changes. For anything that judges something (a finding, a score, a recommendation, an alert), the first criterion is whether the judgement is right and useful for its user, given what the thing judged is for. Test coverage supports that criterion; it is never the gate. A rule ported from old code without asking what it is for is not a requirement.
+
+**Verify the list, then stop.** A verifier checks the fixed criteria and reports pass or fail per criterion. A failure is fixed and rechecked on that criterion only. At most three rounds, then the operator decides. Anything new the verifier notices is added to the list for the operator, never chased in a new round. Report the trend each round: defects in the product against gaps in the tests.
+
+**Banned as a gate:** an open-ended brief to "find a plausible change the tests would not catch". That search never runs out, so a loop built on it has no finish line.
+
+**Read the tool before interpreting it.** Before code maps an external tool's behaviour (exit codes, fields, error text), read its source in full, shared modules included, and try the behaviour live with a read. On AdIntel, exit 2 meant a lapsed sign-in in a shared module and a usage error everywhere else; both the build and its verifier had read only part.
+
+**Check a question before asking it.** Before putting a question to the operator, check whether it exists only because of a design fault. If it does, fix the fault.
 
 ## Proving a boundary from the wrong side
 
